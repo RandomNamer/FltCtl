@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Floating Controls</string>
+    <string name="eink_mode">E-Ink Mode</string>
+    <string name="about">About...</string>
+    <string name="floating_wnd_switch">Enable Floating Control</string>
+    <string name="show_wnd_in_app">Show Controls</string>
+</resources>
