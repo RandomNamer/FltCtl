@@ -14,6 +14,6 @@ val Context.settings by preferencesDataStore(name = SETTINGS)
 object SettingKeys {
     val UI_EINK_MODE = booleanPreferencesKey("eink_ui")
     val WINDOW_ADHERE_TO_EDGE = booleanPreferencesKey("window_adhere_to_edge")
-    val CONTROL_SETTINGS_LIST = stringPreferencesKey("control_settings_list")
+    val CURRENT_CONTROL = stringPreferencesKey("current_control")
     val ENABLED = booleanPreferencesKey("enabled")
 }

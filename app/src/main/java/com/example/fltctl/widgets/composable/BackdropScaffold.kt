@@ -1,7 +1,6 @@
 package com.example.fltctl.widgets.composable
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -42,9 +41,10 @@ fun BackdropScaffold(
     containerColor: Color = MaterialTheme.colorScheme.background,
     contentColor: Color = contentColorFor(containerColor),
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
-    frontLayerPaddingTop: Dp = 12.dp,
-    frontLayerPaddingHorizontal: Dp = 8.dp,
+    backLayerPaddingTop: Dp = 8.dp,
+    backLayerPaddingHorizontal: Dp = 8.dp,
     cornerRadius: Dp = 12.dp,
+    frontLayerColor: Color = MaterialTheme.colorScheme.surface,
     backLayerColor: Color,
     content: @Composable (PaddingValues) -> Unit
 ) {
@@ -52,24 +52,24 @@ fun BackdropScaffold(
         Box(modifier = Modifier
             .fillMaxSize()
             .padding(pd)) {
-            Surface(
-                Modifier
+            Box(
+                modifier = Modifier
                     .fillMaxSize()
                     .padding(
-                        start = frontLayerPaddingHorizontal,
-                        end = frontLayerPaddingHorizontal,
-                        top = frontLayerPaddingTop
-                    )) {
-                content.invoke(PaddingValues(top = cornerRadius / 2, start = cornerRadius, end = cornerRadius))
+                        start = backLayerPaddingHorizontal,
+                        end = backLayerPaddingHorizontal,
+                        top = backLayerPaddingTop
+                    ).background(color = frontLayerColor)) {
+                content.invoke(PaddingValues(top = cornerRadius , start = cornerRadius, end = cornerRadius))
             }
             Canvas(
                 modifier = Modifier
                     .fillMaxSize(),
                 onDraw = {
                     val mask = RoundRect(
-                        left = frontLayerPaddingHorizontal.toPx(),
-                        top = frontLayerPaddingTop.toPx(),
-                        right = size.width - frontLayerPaddingHorizontal.toPx(),
+                        left = backLayerPaddingHorizontal.toPx(),
+                        top = backLayerPaddingTop.toPx(),
+                        right = size.width - backLayerPaddingHorizontal.toPx(),
                         bottom = size.height,
                         topLeftCornerRadius = CornerRadius(cornerRadius.toPx(), cornerRadius.toPx()),
                         topRightCornerRadius = CornerRadius(cornerRadius.toPx(), cornerRadius.toPx())

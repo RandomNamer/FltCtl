@@ -1,7 +1,19 @@
 <resources>
     <string name="app_name">Floating Controls</string>
     <string name="eink_mode">E-Ink Mode</string>
-    <string name="about">About...</string>
+    <string name="about">About…</string>
     <string name="floating_wnd_switch">Enable Floating Control</string>
     <string name="show_wnd_in_app">Show Controls</string>
+    <string name="expand">Expand</string>
+    <string name="collapse">Collapse</string>
+    <string name="controlDisplayName_default_volume">Default Volume Control</string>
+    <string name="controlDisplayName_volume_turn_page">Volume Control (turning page style)</string>
+    <string name="control_card_currently_selected">Current: </string>
+    <string name="control_card_title">Select a floating control</string>
+    <string name="control_card_configure">Configure…</string>
+    <string name="control_card_expand">More</string>
+    <string name="control_card_collapse">Collapse</string>
+    <string name="settings_card_title">Settings &amp; More</string>
+    <string name="title_activity_color_palette">ColorPaletteActivity</string>
+    <string name="goto_color_palette">Color Palette…</string>
 </resources>

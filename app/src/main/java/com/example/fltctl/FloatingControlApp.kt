@@ -88,7 +88,8 @@ object AppMonitor {
     private val startedActivities = mutableListOf<Activity>()
 
     @JvmStatic
-    private var topActivity: Activity? = null
+    var topActivity: Activity? = null
+        private set
 
     @JvmStatic
     private var isInForeground = false
