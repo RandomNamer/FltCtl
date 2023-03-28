@@ -16,4 +16,6 @@
     <string name="settings_card_title">Settings &amp; More</string>
     <string name="title_activity_color_palette">ColorPaletteActivity</string>
     <string name="goto_color_palette">Color Palette…</string>
+    <string name="request_overlay_failed">Failed to request screen overlay permission</string>
+    <string name="accessibility_desc">Need to use AccessibilityService to perform click</string>
 </resources>

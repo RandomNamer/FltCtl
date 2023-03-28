@@ -67,7 +67,7 @@ class HomeViewModel : ViewModel() {
     }
 
     fun toggleShowWindow(show: Boolean) {
-        if (show) FloatingControlManager.tryShowWindow {
+        if (show) FloatingControlManager.tryShowWindowWithCurrentControl {
             _isWindowShowing.value = it
         } else {
             FloatingControlManager.closeWindow()

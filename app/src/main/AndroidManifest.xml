@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
     <application
         android:name=".FloatingControlApp"
         android:allowBackup="true"
@@ -13,6 +15,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FltCtl"
         tools:targetApi="31">
+
+        <service android:name=".controls.service.FloatingControlAccessibilityService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config_fltctl" />
+        </service>
+
         <activity
             android:name=".ui.ColorPaletteActivity"
             android:exported="false"

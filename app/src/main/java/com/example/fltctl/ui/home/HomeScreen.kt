@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -29,11 +30,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.fltctl.AppMonitor
 import com.example.fltctl.R
 import com.example.fltctl.SettingKeys
 import com.example.fltctl.settings
 import com.example.fltctl.ui.ColorPaletteActivity
 import com.example.fltctl.ui.takeProportion
+import com.example.fltctl.utils.hasEnabledAccessibilityService
+import com.example.fltctl.utils.hasOverlaysPermission
 import com.example.fltctl.widgets.composable.*
 import kotlinx.coroutines.launch
 import java.util.*
@@ -43,7 +47,9 @@ import java.util.*
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    vm: HomeViewModel
+    vm: HomeViewModel,
+    requestOverlaysPermission: ( (Boolean) -> Unit ) -> Unit,
+    requestAccessibilityPermission: ( (Boolean) -> Unit ) -> Unit
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
     val backgroundColor: Color = MaterialTheme.colorScheme.primary
@@ -79,9 +85,25 @@ fun HomeScreen(
            SwitchCard(
                isInEInkMode = state.eInkModeEnabled,
                color = cardColor,
-               switched = state.enabled,
+               switched = state.enabled && hasOverlaysPermission(LocalContext.current),
                checked = state.isShowing,
-               onSwitched = vm::toggleEnable,
+               onSwitched = { turnOn ->
+                   if (turnOn) {
+                       if (hasOverlaysPermission(AppMonitor.appContext)) {
+                           if (hasEnabledAccessibilityService(AppMonitor.appContext)) {
+                               vm.toggleEnable(true)
+                           } else {
+                               requestAccessibilityPermission { enabled ->
+                                   if (enabled) vm.toggleEnable(true)
+                               }
+                           }
+                       } else {
+                           requestOverlaysPermission { granted ->
+                               if (granted) vm.toggleEnable(true)
+                           }
+                       }
+                   } else vm.toggleEnable(false)
+               },
                onChecked = vm::toggleShowWindow
            )
            Spacer(Modifier.height(16.dp))
@@ -344,7 +366,6 @@ fun HomeTopBar(
         modifier = if (isInEInkMode) Modifier.borderBottom(1.dp, borderColor) else Modifier,
         title = {
             val fraction = scrollBehavior.state.collapsedFraction
-            Log.e("comp", "cFraction: $fraction")
             Text(
                 text = stringResource(id = R.string.app_name).uppercase(),
                 fontSize = IntRange(32, 20).takeProportion(fraction).sp,
