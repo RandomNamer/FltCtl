@@ -1,27 +1,34 @@
 package com.example.fltctl.widgets.composable
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.Canvas
+import android.util.Log
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBox
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathOperation
-import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.example.fltctl.ui.takeNext
+import kotlin.math.roundToInt
 
 /**
  * As Google mentioned,
@@ -41,55 +48,76 @@ fun BackdropScaffold(
     containerColor: Color = MaterialTheme.colorScheme.background,
     contentColor: Color = contentColorFor(containerColor),
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
-    backLayerPaddingTop: Dp = 8.dp,
-    backLayerPaddingHorizontal: Dp = 8.dp,
-    cornerRadius: Dp = 12.dp,
-    frontLayerColor: Color = MaterialTheme.colorScheme.surface,
-    backLayerColor: Color,
-    content: @Composable (PaddingValues) -> Unit
+    frontLayerShape: RoundedCornerShape = RoundedCornerShape(
+        topStart = 12.dp,
+        topEnd = 12.dp,
+        bottomStart = 0.dp,
+        bottomEnd = 0.dp
+    ),
+    frontLayerPadding: PaddingValues = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+    frontLayerElevation: Float = 4f,
+    backLayerPeekHeight: Dp = 0.dp,
+    enableGesture: Boolean = false,
+    expandInitially: Boolean = false,
+    backLayerContent: @Composable BoxScope.() -> Unit = { Spacer(modifier = Modifier.height(4.dp)) },
+    frontLayerContent: @Composable BoxScope.() -> Unit
 ) {
-    Scaffold(modifier, topBar, bottomBar, snackbarHost, floatingActionButton, floatingActionButtonPosition, containerColor, contentColor, contentWindowInsets) { pd ->
+    val peekHeightPx = backLayerPeekHeight.toPxFloat()
+    val frontLayerVisibleHeightPx = remember {
+        mutableStateOf(if (expandInitially) peekHeightPx else 0f)
+    }
+    val expanded by remember {
+        derivedStateOf { frontLayerVisibleHeightPx.value == peekHeightPx }
+    }
+    val collapsed by remember {
+        derivedStateOf { frontLayerVisibleHeightPx.value == 0f }
+    }
+    val backLayerNestedScrollConnection = remember {
+        object: NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (enableGesture) {
+                    var remaining: Offset = available.copy(y = 0f)
+                    val newHeight = available.y + frontLayerVisibleHeightPx.value
+                    if (newHeight > peekHeightPx) remaining = remaining.copy(y = newHeight - peekHeightPx)
+                    if (newHeight < 0f) remaining = remaining.copy(y = newHeight)
+                    frontLayerVisibleHeightPx.value = newHeight.coerceIn(0f, peekHeightPx)
+                    return remaining
+                } else return available
+            }
+        }
+    }
+    Scaffold(modifier, topBar, bottomBar, snackbarHost, floatingActionButton, floatingActionButtonPosition, containerColor, contentColor, contentWindowInsets) { pv ->
         Box(modifier = Modifier
             .fillMaxSize()
-            .padding(pd)) {
+            .padding(pv)
+        ) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = backLayerPaddingHorizontal,
-                        end = backLayerPaddingHorizontal,
-                        top = backLayerPaddingTop
-                    ).background(color = frontLayerColor)) {
-                content.invoke(PaddingValues(top = cornerRadius , start = cornerRadius, end = cornerRadius))
-            }
-            Canvas(
-                modifier = Modifier
                     .fillMaxSize(),
-                onDraw = {
-                    val mask = RoundRect(
-                        left = backLayerPaddingHorizontal.toPx(),
-                        top = backLayerPaddingTop.toPx(),
-                        right = size.width - backLayerPaddingHorizontal.toPx(),
-                        bottom = size.height,
-                        topLeftCornerRadius = CornerRadius(cornerRadius.toPx(), cornerRadius.toPx()),
-                        topRightCornerRadius = CornerRadius(cornerRadius.toPx(), cornerRadius.toPx())
-                    )
-                    val p1 = Path().apply {
-                        addRoundRect(mask)
+            ) {
+                backLayerContent.invoke(this)
+            }
+            val baseFrontLayerModifier = remember {
+                Modifier
+                    .fillMaxSize()
+                    .padding(frontLayerPadding)
+                    .offset { IntOffset(x = 0, y = frontLayerVisibleHeightPx.value.roundToInt()) }
+                    .graphicsLayer {
+                        clip = true
+                        shape = frontLayerShape
+                        shadowElevation = frontLayerElevation
                     }
-                    val p2 = Path().apply {
-                        addRect(Rect(0f, 0f, size.width, size.height))
-                    }
-
-                    p1.op(p1, p2, PathOperation.Xor)
-
-//                    drawPath(p1, SolidColor(Color.Red))
-
-                    clipPath(path = p1) {
-                        drawRect(backLayerColor)
-                    }
-                }
-            )
+                    .background(color = containerColor)
+            }
+            Box(
+                modifier = if (enableGesture) {
+                    baseFrontLayerModifier
+                        .nestedScroll(backLayerNestedScrollConnection)
+                        .verticalScroll(rememberScrollState())
+                } else baseFrontLayerModifier
+            ) {
+                frontLayerContent.invoke(this)
+            }
         }
     }
 }
@@ -111,17 +139,92 @@ fun BackdropScaffoldPreview() {
                 Icon(Icons.Rounded.AccountBox, null)
             }
         },
-        backLayerColor = Color.Red
-    ) { pd ->
-        Box(modifier = Modifier
-            .background(Color.Yellow)
-            .fillMaxSize()
-            .padding(pd)) {
+        expandInitially = true,
+        enableGesture = true,
+        frontLayerElevation = 10f,
+        frontLayerPadding = PaddingValues(top = 10.dp, start = 4.dp, end = 4.dp, bottom = 0.dp),
+        backLayerPeekHeight = 100.dp,
+        backLayerContent = {
+            Spacer(modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Cyan))
+        },
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Yellow)
+        ) {
             Text(
                 text ="Inner content",
                 modifier = Modifier.align(Alignment.Center),
                 textAlign = TextAlign.Center
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Composable
+fun BackdropScaffoldAnimPreview() {
+
+    val topBarTargetHeights = remember {
+        listOf(
+            50.dp,
+            100.dp,
+            200.dp,
+            400.dp
+        )
+    }
+
+    val topBarExpansionState = remember {
+        MutableTransitionState(100.dp)
+    }
+    val transition = updateTransition(targetState = topBarExpansionState, label = "114514")
+    val animatedHeight = transition.animateDp({
+        tween(durationMillis = 300)
+    }, label = "") {
+        it.targetState
+    }
+
+    val onClickChangeHeight = {
+        val next = topBarTargetHeights.takeNext(topBarExpansionState.currentState)
+        Log.e("preview", "next height: $next, ${topBarExpansionState.targetState}")
+        topBarExpansionState.targetState = next
+    }
+
+    BackdropScaffold(
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.mediumTopAppBarColors(containerColor = Color.Red),
+                title = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        Text(text = "AppBar", style = MaterialTheme.typography.headlineMedium)
+                    }
+                }
+            )
+        },
+        backLayerPeekHeight = animatedHeight.value,
+        enableGesture = false,
+        expandInitially = true,
+        backLayerContent = {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White), contentAlignment = Alignment.TopStart) {
+                Text(text = "current height: ${animatedHeight.value}")
+            }
+        }
+    ) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Cyan), contentAlignment = Alignment.Center) {
+            Button(onClick = onClickChangeHeight) {
+                Text(text = "Animate")
+            }
         }
     }
 }
