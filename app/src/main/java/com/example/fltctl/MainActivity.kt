@@ -9,7 +9,9 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.fltctl.ui.BaseComposeActivity
 import com.example.fltctl.ui.home.HomeScreen
 import com.example.fltctl.ui.home.HomeViewModel
 import com.example.fltctl.ui.theme.FltCtlTheme
@@ -18,7 +20,7 @@ import com.example.fltctl.utils.hasEnabledAccessibilityService
 import com.example.fltctl.utils.hasOverlaysPermission
 import kotlinx.coroutines.flow.map
 
-class MainActivity : ComponentActivity() {
+class MainActivity : BaseComposeActivity() {
 
     companion object {
         private const val REQ_CODE_DRAW_OVERLAY = 1919810
@@ -31,30 +33,19 @@ class MainActivity : ComponentActivity() {
 
     private var accessibilityPermissionResultConsumer: ((Boolean) -> Unit)? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setContent {
-            val eInkModeState = settings.data.map {
-                it[SettingKeys.UI_EINK_MODE]
-            }.collectAsStateWithLifecycle(initialValue = false)
-
-            FltCtlTheme(
-                isInEInkMode = eInkModeState.value ?: false
-            ) {
-                HomeScreen(
-                    vm = vm,
-                    requestOverlaysPermission = {
-                        overlayPermissionResultConsumer = it
-                        requestOverlaysPermission()
-                    },
-                    requestAccessibilityPermission = {
-                        accessibilityPermissionResultConsumer = it
-                        requestAccessibilityPermission()
-                    }
-                )
+    @Composable
+    override fun Content() {
+        HomeScreen(
+            vm = vm,
+            requestOverlaysPermission = {
+                overlayPermissionResultConsumer = it
+                requestOverlaysPermission()
+            },
+            requestAccessibilityPermission = {
+                accessibilityPermissionResultConsumer = it
+                requestAccessibilityPermission()
             }
-        }
+        )
     }
 
     private fun requestOverlaysPermission() {

@@ -8,6 +8,7 @@
     <string name="collapse">Collapse</string>
     <string name="controlDisplayName_default_volume">Default Volume Control</string>
     <string name="controlDisplayName_volume_turn_page">Volume Control (turning page style)</string>
+    <string name="controlDisplayName_vert_turn_page">TikTok Auto Turn Page</string>
     <string name="control_card_currently_selected">Current: </string>
     <string name="control_card_title">Select a floating control</string>
     <string name="control_card_configure">Configure…</string>
@@ -16,6 +17,17 @@
     <string name="settings_card_title">Settings &amp; More</string>
     <string name="title_activity_color_palette">ColorPaletteActivity</string>
     <string name="goto_color_palette">Color Palette…</string>
+    <string name="goto_app_select">App Select Test…</string>
     <string name="request_overlay_failed">Failed to request screen overlay permission</string>
     <string name="accessibility_desc">Need to use AccessibilityService to perform click</string>
+    <string name="title_activity_settings">Settings &amp; More</string>
+    <string name="title_activity_app_select">AppSelectActivity</string>
+    <string name="app_selection_packageName">Package Name:</string>
+    <string name="app_selection_lastUsedTime">Last opened:</string>
+    <string name="app_selection_apkDir">APK Path:</string>
+    <string name="app_selection_pageTitle">Select Apps</string>
+    <string name="app_selection_endAction">Done</string>
+    <string name="app_selection_currentlySelected">Selected %1$d of %2$d</string>
+    <string name="app_selection_filter_sys">Include System Apps</string>
+    <string name="app_selection_filter_exported">Must Have Activity</string>
 </resources>

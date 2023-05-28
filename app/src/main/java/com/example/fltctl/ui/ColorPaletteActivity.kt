@@ -26,37 +26,34 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
 import com.example.fltctl.ui.theme.FltCtlTheme
 
-class ColorPaletteActivity : ComponentActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            FltCtlTheme {
-                val colorsWithDesc = mutableMapOf<String, Color>().apply {
-                    androidx.compose.material3.MaterialTheme.colorScheme.run {
-                        put("background", background)
-                        put("surface", surface)
-                        put("primary", primary)
-                        put("secondary", secondary)
-                        put("tertiary", tertiary)
-                        put("onPrimary", onPrimary)
-                        put("onSecondary", onSecondary)
-                        put("onTertiary", onTertiary)
-                        put("primaryContainer", primaryContainer)
-                        put("secondaryContainer", secondaryContainer)
-                        put("tertiaryContainer", tertiaryContainer)
-                        put("onPrimaryContainer", onPrimaryContainer)
-                        put("onSecondaryContainer", onSecondaryContainer)
-                        put("onTertiaryContainer", onTertiaryContainer)
-                        put("onBackground", onBackground)
-                        put("onSurface", onSurface)
-                        put("onSurfaceVariant", onSurfaceVariant)
-                        put("surfaceVariant", surfaceVariant)
-                    }
+class ColorPaletteActivity : BaseComposeActivity() {
+    @Composable
+    override fun Content() {
+        Surface {
+            val colorsWithDesc = mutableMapOf<String, Color>().apply {
+                androidx.compose.material3.MaterialTheme.colorScheme.run {
+                    put("background", background)
+                    put("surface", surface)
+                    put("primary", primary)
+                    put("secondary", secondary)
+                    put("tertiary", tertiary)
+                    put("onPrimary", onPrimary)
+                    put("onSecondary", onSecondary)
+                    put("onTertiary", onTertiary)
+                    put("primaryContainer", primaryContainer)
+                    put("secondaryContainer", secondaryContainer)
+                    put("tertiaryContainer", tertiaryContainer)
+                    put("onPrimaryContainer", onPrimaryContainer)
+                    put("onSecondaryContainer", onSecondaryContainer)
+                    put("onTertiaryContainer", onTertiaryContainer)
+                    put("onBackground", onBackground)
+                    put("onSurface", onSurface)
+                    put("onSurfaceVariant", onSurfaceVariant)
+                    put("surfaceVariant", surfaceVariant)
                 }
-                Box(Modifier.fillMaxWidth().background(Color(0xFF6A6C6E))) {
-                    ColorPalette(colors = colorsWithDesc)
-                }
+            }
+            Box(Modifier.fillMaxWidth().background(Color(0xFF6A6C6E))) {
+                ColorPalette(colors = colorsWithDesc)
             }
         }
     }

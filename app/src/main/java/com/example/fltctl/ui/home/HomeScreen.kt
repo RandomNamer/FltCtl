@@ -2,12 +2,12 @@ package com.example.fltctl.ui.home
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -33,9 +32,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.fltctl.AppMonitor
 import com.example.fltctl.R
 import com.example.fltctl.SettingKeys
+import com.example.fltctl.appselection.ui.AppSelectActivity
 import com.example.fltctl.settings
 import com.example.fltctl.ui.ColorPaletteActivity
+import com.example.fltctl.ui.settings.SettingsActivity
 import com.example.fltctl.ui.takeProportion
+import com.example.fltctl.ui.theme.isInEInkMode
 import com.example.fltctl.utils.hasEnabledAccessibilityService
 import com.example.fltctl.utils.hasOverlaysPermission
 import com.example.fltctl.widgets.composable.*
@@ -58,32 +60,37 @@ fun HomeScreen(
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
     )
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val context = LocalContext.current
    BackdropScaffold(
        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
        topBar = {
            HomeTopBar(
                scrollBehavior,
-               isInEInkMode = state.eInkModeEnabled,
                backgroundColor = backgroundColor,
                contentColor = MaterialTheme.colorScheme.onPrimary
            )
        },
-       frontLayerColor = MaterialTheme.colorScheme.surface,
-       backLayerColor = backgroundColor,
-       cornerRadius = 16.dp,
-       backLayerPaddingTop = 2.dp,
-       backLayerPaddingHorizontal = 2.dp
-   ) { pv ->
+       frontLayerShape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+       frontLayerPadding = PaddingValues(top = 2.dp, start = 2.dp, end = 2.dp, bottom = 0.dp),
+       backLayerContent = {
+           Spacer(
+               Modifier
+                   .fillMaxSize()
+                   .background(backgroundColor))
+       },
+       customPeekHeight = 4.dp,
+       enableGesture = false
+   ) {
        Column(
            modifier = Modifier
                .fillMaxSize()
+               .background(MaterialTheme.colorScheme.surface)
                .padding(top = 12.dp, start = 12.dp, end = 12.dp)
                .verticalScroll(rememberScrollState()),
            verticalArrangement = Arrangement.Top,
            horizontalAlignment = Alignment.CenterHorizontally,
        ) {
            SwitchCard(
-               isInEInkMode = state.eInkModeEnabled,
                color = cardColor,
                switched = state.enabled && hasOverlaysPermission(LocalContext.current),
                checked = state.isShowing,
@@ -108,15 +115,14 @@ fun HomeScreen(
            )
            Spacer(Modifier.height(16.dp))
            ControlSelectionCard(
-               isInEInkMode = state.eInkModeEnabled,
                color = cardColor,
                controlSelectionState = state.controlSelectionList,
                onSelect = vm::onSelectControl,
                onConfigure = vm::onClickConfigureControl
            )
            Spacer(Modifier.height(16.dp))
-           SettingsCard(isInEInkMode = state.eInkModeEnabled, color = cardColor) {
-
+           SettingsCard(color = cardColor) {
+               context.startActivity(Intent(context, SettingsActivity::class.java))
            }
        }
    }
@@ -124,7 +130,6 @@ fun HomeScreen(
 
 @Composable
 fun SettingsCard(
-    isInEInkMode: Boolean,
     color: CardColors,
     onClick: () -> Unit
 ) {
@@ -150,7 +155,6 @@ fun SettingsCard(
 
 @Composable
 fun ControlSelectionCard(
-    isInEInkMode: Boolean,
     color: CardColors,
     controlSelectionState: List<ControlSelection>,
     onSelect: (String) -> Unit,
@@ -215,7 +219,6 @@ fun ControlSelectionCard(
 @Preview
 fun ControlSelectionCardPreview() {
     ControlSelectionCard(
-        isInEInkMode = false,
         color = CardDefaults.elevatedCardColors(),
         controlSelectionState = listOf(
             ControlSelection(
@@ -288,7 +291,6 @@ fun ControlSelectionView(
 
 @Composable
 fun SwitchCard(
-    isInEInkMode: Boolean,
     switched: Boolean,
     checked: Boolean,
     color: CardColors,
@@ -343,7 +345,7 @@ fun SwitchCardPreview() {
         Modifier
             .size(300.dp, 400.dp)
             .background(Color.Yellow)) {
-        SwitchCard(isInEInkMode = true, switched = true, checked = true, onSwitched = {}, onChecked = {}, color = CardDefaults.elevatedCardColors())
+        SwitchCard(switched = true, checked = true, onSwitched = {}, onChecked = {}, color = CardDefaults.elevatedCardColors())
     }
 }
 
@@ -351,7 +353,6 @@ fun SwitchCardPreview() {
 @Composable
 fun HomeTopBar(
     scrollBehavior: TopAppBarScrollBehavior,
-    isInEInkMode: Boolean = false,
     borderColor: Color = MaterialTheme.colorScheme.onBackground,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -374,7 +375,7 @@ fun HomeTopBar(
             )
         },
         actions = {
-            TopBarMenu(isInEInkMode = isInEInkMode) {
+            TopBarMenu {
                 Toast.makeText(ctx, "Floating Control", Toast.LENGTH_SHORT).show()
             }
         },
@@ -383,9 +384,10 @@ fun HomeTopBar(
 }
 
 @Composable
-fun TopBarMenu(isInEInkMode: Boolean, onClickAbout: () -> Unit) {
+fun TopBarMenu(onClickAbout: () -> Unit) {
     var expended by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
+    val currentEInkMode = isInEInkMode
     val scope = rememberCoroutineScope()
     IconButton(onClick = { expended = true }) {
         Icon(Icons.Filled.MoreVert, null)
@@ -405,7 +407,7 @@ fun TopBarMenu(isInEInkMode: Boolean, onClickAbout: () -> Unit) {
             onClick = {
                 scope.launch {
                     ctx.settings.edit {
-                        it[SettingKeys.UI_EINK_MODE] = isInEInkMode.not()
+                        it[SettingKeys.UI_EINK_MODE] = currentEInkMode.not()
                     }
                 }
             }
@@ -428,6 +430,19 @@ fun TopBarMenu(isInEInkMode: Boolean, onClickAbout: () -> Unit) {
         }, onClick = {
             ctx.startActivity(Intent(ctx, ColorPaletteActivity::class.java))
         }, leadingIcon = {} , trailingIcon = {})
+        DropdownMenuItem(
+            text = {
+                Text(
+                    text = stringResource(id = R.string.goto_app_select),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            },
+            onClick = {
+                ctx.startActivity(Intent(ctx, AppSelectActivity::class.java))
+            },
+            leadingIcon = {}, trailingIcon = {}
+        )
     }
 }
 
@@ -435,5 +450,5 @@ fun TopBarMenu(isInEInkMode: Boolean, onClickAbout: () -> Unit) {
 @Preview
 @Composable
 fun HomeTopBarPreview() {
-    HomeTopBar(TopAppBarDefaults.enterAlwaysScrollBehavior(), true, Color.Black)
+    HomeTopBar(TopAppBarDefaults.enterAlwaysScrollBehavior(),  Color.Black)
 }

@@ -2,6 +2,7 @@ package com.example.fltctl.widgets.composable
 
 import android.annotation.SuppressLint
 import android.util.Log
+import android.widget.Space
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.*
@@ -22,6 +23,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -54,35 +57,41 @@ fun BackdropScaffold(
         bottomStart = 0.dp,
         bottomEnd = 0.dp
     ),
-    frontLayerPadding: PaddingValues = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
-    frontLayerElevation: Float = 4f,
-    backLayerPeekHeight: Dp = 0.dp,
+    frontLayerPadding: PaddingValues = PaddingValues(top = 4.dp),
+    frontLayerElevation: Dp = 4.dp,
+    customPeekHeight: Dp = 0.dp,
     enableGesture: Boolean = false,
     expandInitially: Boolean = false,
-    backLayerContent: @Composable BoxScope.() -> Unit = { Spacer(modifier = Modifier.height(4.dp)) },
+    backLayerContent: @Composable BoxScope.(PaddingValues) -> Unit = { Spacer(modifier = Modifier.height(4.dp)) },
     frontLayerContent: @Composable BoxScope.() -> Unit
 ) {
-    val peekHeightPx = backLayerPeekHeight.toPxFloat()
-    val frontLayerVisibleHeightPx = remember {
+    val useCustomPeekHeight = customPeekHeight > 0.dp
+    val customPeekHeightPx = customPeekHeight.toPxFloat()
+    var peekHeightPx by remember { mutableStateOf(customPeekHeightPx) }
+    var backLayerVisibleHeightPx by remember {
         mutableStateOf(if (expandInitially) peekHeightPx else 0f)
     }
+    val frontLayerDragLimit = frontLayerPadding.calculateTopPadding().toPxFloat() + frontLayerShape.topStart.toPx()
     val expanded by remember {
-        derivedStateOf { frontLayerVisibleHeightPx.value == peekHeightPx }
+        derivedStateOf { backLayerVisibleHeightPx == peekHeightPx }
     }
     val collapsed by remember {
-        derivedStateOf { frontLayerVisibleHeightPx.value == 0f }
+        derivedStateOf { backLayerVisibleHeightPx == 0f }
     }
     val backLayerNestedScrollConnection = remember {
         object: NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                var consumed: Offset = Offset.Zero
                 if (enableGesture) {
-                    var remaining: Offset = available.copy(y = 0f)
-                    val newHeight = available.y + frontLayerVisibleHeightPx.value
-                    if (newHeight > peekHeightPx) remaining = remaining.copy(y = newHeight - peekHeightPx)
-                    if (newHeight < 0f) remaining = remaining.copy(y = newHeight)
-                    frontLayerVisibleHeightPx.value = newHeight.coerceIn(0f, peekHeightPx)
-                    return remaining
-                } else return available
+                    val newHeight = available.y + backLayerVisibleHeightPx
+                    consumed = when {
+                        newHeight > peekHeightPx -> consumed.copy(y = peekHeightPx - backLayerVisibleHeightPx)
+                        newHeight < 0f -> consumed.copy(y = backLayerVisibleHeightPx)
+                        else -> consumed.copy(y = available.y)
+                    }
+                    backLayerVisibleHeightPx = newHeight.coerceIn(0f, peekHeightPx)
+                    return consumed
+                } else return consumed
             }
         }
     }
@@ -93,27 +102,41 @@ fun BackdropScaffold(
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize(),
+                    .fillMaxWidth()
+                    .layoutId("backLayer")
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        if (!useCustomPeekHeight) {
+                            peekHeightPx =
+                                (placeable.height.toFloat() - frontLayerDragLimit).coerceAtLeast(0f)
+                            backLayerVisibleHeightPx = if (expandInitially) peekHeightPx else 0f
+                        }
+                        layout(placeable.width, placeable.height) {
+                            placeable.place(0, 0)
+                        }
+                    }
             ) {
-                backLayerContent.invoke(this)
+                backLayerContent.invoke(this, PaddingValues(bottom = frontLayerDragLimit.toDp()))
             }
+
+            val frontLayerElevationPx = frontLayerElevation.toPxFloat()
             val baseFrontLayerModifier = remember {
                 Modifier
                     .fillMaxSize()
                     .padding(frontLayerPadding)
-                    .offset { IntOffset(x = 0, y = frontLayerVisibleHeightPx.value.roundToInt()) }
+                    .offset { IntOffset(x = 0, y = backLayerVisibleHeightPx.roundToInt()) }
                     .graphicsLayer {
                         clip = true
                         shape = frontLayerShape
-                        shadowElevation = frontLayerElevation
+                        shadowElevation = frontLayerElevationPx
                     }
                     .background(color = containerColor)
+                    .layoutId("frontLayer")
             }
             Box(
                 modifier = if (enableGesture) {
                     baseFrontLayerModifier
                         .nestedScroll(backLayerNestedScrollConnection)
-                        .verticalScroll(rememberScrollState())
                 } else baseFrontLayerModifier
             ) {
                 frontLayerContent.invoke(this)
@@ -141,25 +164,43 @@ fun BackdropScaffoldPreview() {
         },
         expandInitially = true,
         enableGesture = true,
-        frontLayerElevation = 10f,
+        frontLayerElevation = 10.dp,
         frontLayerPadding = PaddingValues(top = 10.dp, start = 4.dp, end = 4.dp, bottom = 0.dp),
-        backLayerPeekHeight = 100.dp,
         backLayerContent = {
-            Spacer(modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Cyan))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .background(Color.Green)
+                    .padding(it)
+            ) {
+                Spacer(modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Blue)
+                )
+            }
         },
     ) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Yellow)
+                .matchParentSize()
+                .background(Color.Yellow),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text ="Inner content",
-                modifier = Modifier.align(Alignment.Center),
-                textAlign = TextAlign.Center
-            )
+            Column(modifier = Modifier.fillMaxWidth(0.8f).verticalScroll(rememberScrollState())) {
+                (1..40).toList().forEach{
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .height(80.dp)
+                            .padding(top = 10.dp)
+                            .background(Color.Cyan),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "item $it")
+                    }
+                }
+            }
         }
     }
 }
@@ -208,7 +249,7 @@ fun BackdropScaffoldAnimPreview() {
                 }
             )
         },
-        backLayerPeekHeight = animatedHeight.value,
+        customPeekHeight = animatedHeight.value,
         enableGesture = false,
         expandInitially = true,
         backLayerContent = {

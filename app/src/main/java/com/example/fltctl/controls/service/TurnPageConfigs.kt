@@ -60,7 +60,8 @@ data class TurnPageResult(
     val node: AccessibilityNodeInfo
 )
 
-fun findPageBy(root: AccessibilityNodeInfo): TurnPageResult? {
+fun findPageBy(root: AccessibilityNodeInfo?): TurnPageResult? {
+    root ?: return null
     val result = getMethodPriority(root.packageName.toString()).map { method ->
         findNodesBy(root, method::match).map {
             TurnPageResult(method::turnNext, method::turnPrev, it)

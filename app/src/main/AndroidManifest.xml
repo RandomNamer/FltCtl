@@ -4,6 +4,9 @@
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
     <application
         android:name=".FloatingControlApp"
         android:allowBackup="true"
@@ -15,14 +18,27 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FltCtl"
         tools:targetApi="31">
+        <activity
+            android:name=".appselection.ui.AppSelectActivity"
+            android:exported="false"
+            android:label="@string/title_activity_app_select"
+            android:theme="@style/Theme.FltCtl" />
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:label="@string/title_activity_settings"
+            android:theme="@style/Theme.FltCtl" />
 
-        <service android:name=".controls.service.FloatingControlAccessibilityService"
+        <service
+            android:name=".controls.service.FloatingControlAccessibilityService"
             android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
-            <meta-data android:name="android.accessibilityservice"
+
+            <meta-data
+                android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config_fltctl" />
         </service>
 

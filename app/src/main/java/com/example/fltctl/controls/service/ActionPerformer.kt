@@ -9,27 +9,53 @@ import com.example.fltctl.AppMonitor
 import com.example.fltctl.controls.arch.FloatingControlManager
 import java.lang.ref.WeakReference
 
-interface IActionsPerformer: AccessibilityServiceSupportedActions {
+interface CommonActions {
     fun pressVolumeUp()
     fun pressVolumeDown()
 }
 
-interface AccessibilityServiceSupportedActions {
+interface RequireAccessibilityServiceActions {
     fun pressHome()
     fun pressBack()
     fun tryTurnPage(forward: Boolean)
+    fun tryTurnPageVertically(forward: Boolean)
 }
 
-object ActionPerformer: IActionsPerformer {
+private interface AccessibilityServiceActionWrapper: RequireAccessibilityServiceActions {
+    fun onServiceConnect(service: RequireAccessibilityServiceActions)
 
-    private var accessibilityServiceRef: WeakReference<FloatingControlAccessibilityService> = WeakReference(null)
+    fun onServiceDisconnect()
+}
 
-    fun onServiceConnect(service: FloatingControlAccessibilityService) {
-        accessibilityServiceRef = WeakReference(service)
-    }
+object ActionPerformer: CommonActions, AccessibilityServiceActionWrapper by AccessibilityServiceActionWrapperImpl {
 
-    fun onServiceOff() {
-        accessibilityServiceRef.clear()
+    private object AccessibilityServiceActionWrapperImpl: AccessibilityServiceActionWrapper {
+
+        private var accessibilityServiceRef: WeakReference<RequireAccessibilityServiceActions> = WeakReference(null)
+        override fun onServiceConnect(service: RequireAccessibilityServiceActions) {
+            accessibilityServiceRef = WeakReference(service)
+        }
+
+        override fun onServiceDisconnect() {
+            accessibilityServiceRef.clear()
+        }
+
+        override fun pressHome() {
+            accessibilityServiceRef.get()?.pressHome()
+        }
+
+        override fun pressBack() {
+            accessibilityServiceRef.get()?.pressBack()
+        }
+
+        override fun tryTurnPage(forward: Boolean) {
+            accessibilityServiceRef.get()?.tryTurnPage(forward)
+        }
+
+        override fun tryTurnPageVertically(forward: Boolean) {
+            accessibilityServiceRef.get()?.tryTurnPageVertically(forward)
+        }
+
     }
 
     private val audioManager by lazy {
@@ -58,17 +84,5 @@ object ActionPerformer: IActionsPerformer {
         audioManager.adjustVolume(AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
     }
 
-
-    override fun pressHome() {
-        accessibilityServiceRef.get()?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
-    }
-
-    override fun pressBack() {
-        accessibilityServiceRef.get()?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
-    }
-
-    override fun tryTurnPage(forward: Boolean) {
-        accessibilityServiceRef.get()?.turnPage(forward)
-    }
 
 }

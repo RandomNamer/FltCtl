@@ -134,16 +134,14 @@ open class EInkCompatRoundedButton @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        if (isInEInkMode) canvas?.run {
-            drawBorderWithRoundCorner(this)
-        }
+        if (isInEInkMode) canvas?.drawBorderWithRoundCorner()
     }
 
-    private fun drawBorderWithRoundCorner(canvas: Canvas) {
+    private fun Canvas.drawBorderWithRoundCorner() {
         val realRadius = cornerRadius.absoluteValue.coerceAtMost(min(width, height)).toFloat()
         //strokeWidth / 2
         val offset = 2.takeDpAsFloat() / 2
-        canvas.drawRoundRect(RectF(offset, offset, width - offset, height - offset), realRadius, realRadius, borderPaint)
+        drawRoundRect(RectF(offset, offset, width - offset, height - offset), realRadius, realRadius, borderPaint)
     }
 
 

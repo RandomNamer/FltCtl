@@ -9,13 +9,14 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.ViewCompat
-import com.example.fltctl.settings
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -60,18 +61,23 @@ private val eInkColorScheme = lightColorScheme(
     surfaceVariant = Color.White
 )
 
+val LocalEInkMode = compositionLocalOf { false }
+
+val isInEInkMode: Boolean
+    @Composable get() = LocalEInkMode.current
+
 @Composable
 fun FltCtlTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
-    isInEInkMode: Boolean = false,
+    eInkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     val colorScheme = when {
-        isInEInkMode -> eInkColorScheme
-        !isInEInkMode && dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        eInkTheme -> eInkColorScheme
+        !eInkTheme && dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
         darkTheme -> DarkColorScheme
@@ -88,6 +94,9 @@ fun FltCtlTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
-    )
+    ) {
+        CompositionLocalProvider(LocalEInkMode provides eInkTheme) {
+            content.invoke()
+        }
+    }
 }

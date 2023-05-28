@@ -10,9 +10,7 @@ import androidx.lifecycle.Lifecycle
 import com.example.fltctl.*
 import com.example.fltctl.controls.DefaultVolumeKeyControl
 import com.example.fltctl.controls.TuringPageByVolumeKeyControl
-import com.example.fltctl.controls.service.AccessibilityServiceSupportedActions
-import com.example.fltctl.controls.service.ActionPerformer
-import com.example.fltctl.controls.service.FloatingControlAccessibilityService
+import com.example.fltctl.controls.VerticalTurnPageControl
 import com.example.fltctl.ui.home.ControlSelection
 import com.example.fltctl.widgets.window.FloatingWindow
 import kotlinx.coroutines.CoroutineScope
@@ -47,6 +45,10 @@ object FloatingControlManager {
         FloatingControlInfo(
             displayName = getString(R.string.controlDisplayName_volume_turn_page),
             klass = TuringPageByVolumeKeyControl::class
+        ),
+        FloatingControlInfo(
+            displayName = getString(R.string.controlDisplayName_vert_turn_page),
+            klass = VerticalTurnPageControl::class
         )
     ) }
 
@@ -73,9 +75,7 @@ object FloatingControlManager {
             }
         }
 
-    private val settingsFlow by lazy {
-        AppMonitor.appContext.settings.data.shareIn(coroutineScope, started = SharingStarted.Lazily, replay = 1)
-    }
+    private val settingsFlow = AppMonitor.appContext.settings.data
 
     private var lastWindowPositionX = 0f
     private var lastWindowPositionY = 0f
