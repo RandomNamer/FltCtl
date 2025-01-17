@@ -30,7 +30,7 @@ class AppSelectActivity : BaseComposeActivity() {
         AppSelectScreen(
             vm = vm,
             onSelectEnd = this::doneSelecting,
-            onBackPressed = {
+            onBackPressedDelegate = {
                 onBackPressed()
             }
         )

@@ -4,6 +4,7 @@ import android.content.pm.PackageManager
 import com.example.fltctl.AppMonitor
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 
 object AppInfoCache {
@@ -14,7 +15,10 @@ object AppInfoCache {
         val includeApex: Boolean = false
     )
 
-    private val uiModelCache = mutableListOf<AppInfo>()
+    private val uiModelList: List<AppInfo>
+            get() = uiModelCache.values.toList()
+
+    private val uiModelCache = mutableMapOf<String, AppInfo>()
 
     private val packageNameSet = mutableSetOf<String>()
 
@@ -29,10 +33,10 @@ object AppInfoCache {
 
     fun getAppInfo(): Flow<List<AppInfo>> {
         val flow = flow {
-            emit(uiModelCache.toList())
+            emit(uiModelList)
             globalRefreshChannel.receiveAsFlow().collect {
                 refreshInternal(option = it)
-                emit(uiModelCache.toList())
+                emit(uiModelList)
             }
         }
         return flow
@@ -43,13 +47,18 @@ object AppInfoCache {
     }
 
     private fun refreshInternal(option: RetrieveOptions) {
-        val refreshed = pm.getInstalledPackages(resolveFlags(option)).map {
+        val refreshed = pm.getInstalledPackages(resolveFlags(option)).mapNotNull {
             it.toUiModel(pm)
         }
-        refreshed.forEach {
-            if (packageNameSet.add(it.packageName)) uiModelCache.add(it)
+        updateCache(refreshed)
+    }
+
+    private fun updateCache(result: List<AppInfo>) {
+        result.forEach {
+            uiModelCache.merge(it.packageName, it, AppInfo::updateWith)
         }
     }
+
 
     private fun resolveFlags(option: RetrieveOptions): Int {
         return (if (option.getActivityInfo) PackageManager.GET_ACTIVITIES else 0) or

@@ -21,7 +21,7 @@
     <string name="request_overlay_failed">Failed to request screen overlay permission</string>
     <string name="accessibility_desc">Need to use AccessibilityService to perform click</string>
     <string name="title_activity_settings">Settings &amp; More</string>
-    <string name="title_activity_app_select">AppSelectActivity</string>
+    <string name="title_activity_app_select">App Select</string>
     <string name="app_selection_packageName">Package Name:</string>
     <string name="app_selection_lastUsedTime">Last opened:</string>
     <string name="app_selection_apkDir">APK Path:</string>
@@ -30,4 +30,8 @@
     <string name="app_selection_currentlySelected">Selected %1$d of %2$d</string>
     <string name="app_selection_filter_sys">Include System Apps</string>
     <string name="app_selection_filter_exported">Must Have Activity</string>
+    <string name="app_selection_select_activity">Launch an activity</string>
+    <string name="app_selection_goto_settings">Details…</string>
+    <string name="app_selection_activity_counts">%1$d of total %2$d are exported activities. </string>
+    <string name="cancel">Cancel</string>
 </resources>

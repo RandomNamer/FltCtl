@@ -6,6 +6,12 @@
 
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <application
         android:name=".FloatingControlApp"
@@ -17,12 +23,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.FltCtl"
-        tools:targetApi="31">
-        <activity
-            android:name=".appselection.ui.AppSelectActivity"
-            android:exported="false"
-            android:label="@string/title_activity_app_select"
-            android:theme="@style/Theme.FltCtl" />
+        android:enableOnBackInvokedCallback="true"
+        tools:targetApi="33">
+
         <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false"
@@ -56,11 +59,25 @@
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="" />
+        </activity>
+
+        <activity
+            android:name=".appselection.ui.AppSelectActivity"
+            android:exported="true"
+            android:label="@string/title_activity_app_select"
+            android:launchMode="standard"
+            android:taskAffinity="com.example.fltctl.standalone_appselect"
+            android:theme="@style/Theme.FltCtl" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
     </application>
 

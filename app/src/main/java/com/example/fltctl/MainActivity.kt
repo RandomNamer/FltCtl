@@ -85,9 +85,10 @@ class MainActivity : BaseComposeActivity() {
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
-        grantResults: IntArray
+        grantResults: IntArray,
+        deviceId: Int
     ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults, deviceId)
         RuntimePermissionUtil.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 }

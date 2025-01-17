@@ -132,9 +132,9 @@ open class EInkCompatRoundedButton @JvmOverloads constructor(
 
     private fun colorDrawableWithRoundedCorner(color: Int): Drawable = createRoundedCornerColorDrawable(color, cornerRadius.toFloat())
 
-    override fun onDraw(canvas: Canvas?) {
+    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (isInEInkMode) canvas?.drawBorderWithRoundCorner()
+        if (isInEInkMode) canvas.drawBorderWithRoundCorner()
     }
 
     private fun Canvas.drawBorderWithRoundCorner() {

@@ -1,16 +1,13 @@
 package com.example.fltctl
 
 import android.content.Context
-import androidx.compose.runtime.collectAsState
+import android.os.Build
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -32,6 +29,8 @@ object SettingKeys {
     val ENABLED = booleanPreferencesKey("enabled")
     val LAST_WINDOW_POSITION_X = floatPreferencesKey("wnd_pos_x")
     val LAST_WINDOW_POSITION_Y = floatPreferencesKey("wnd_pos_y")
+    val ACTIVITY_LIST_SORTING = booleanPreferencesKey("act_list_sort")
+    val APP_LIST_AGGRESSIVE_SEARCH = booleanPreferencesKey("app_select_search_perf")
 }
 
 object SettingCache {
@@ -52,4 +51,25 @@ object SettingCache {
             }
         }
     }
+}
+
+object EInkDeviceConfigs {
+    @JvmStatic
+    private val eInkBrands = listOf("Onyx", "iReader", "Hanvon")
+
+    @JvmStatic
+    private fun matchByManufacturer(): Boolean {
+        //TODO: pattern matching
+        return eInkBrands.contains(Build.BRAND) || eInkBrands.contains(Build.MANUFACTURER)
+    }
+
+    init {
+        if (matchByManufacturer()) {
+            commonSettingScope.launch {
+                delay(500)
+                AppMonitor.appContext.settings.edit { it[SettingKeys.UI_EINK_MODE] = true }
+            }
+        }
+    }
+
 }

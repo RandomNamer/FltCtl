@@ -362,7 +362,8 @@ fun HomeTopBar(
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
             containerColor = backgroundColor,
             titleContentColor = contentColor,
-            actionIconContentColor = contentColor
+            actionIconContentColor = contentColor,
+            scrolledContainerColor = backgroundColor
         ),
         modifier = if (isInEInkMode) Modifier.borderBottom(1.dp, borderColor) else Modifier,
         title = {
@@ -450,5 +451,5 @@ fun TopBarMenu(onClickAbout: () -> Unit) {
 @Preview
 @Composable
 fun HomeTopBarPreview() {
-    HomeTopBar(TopAppBarDefaults.enterAlwaysScrollBehavior(),  Color.Black)
+    HomeTopBar(TopAppBarDefaults.enterAlwaysScrollBehavior(),  backgroundColor = Color.Black, contentColor = Color.White)
 }

@@ -30,6 +30,10 @@ data class AppInfo(
     val isSystem: Boolean,
     val activities: List<ConciseActivityInfo>
 ) {
+    companion object {
+        val EMPTY = testAppInfo.copy(activities = listOf())
+    }
+
     fun iconBitmap(size: Int): Bitmap =
         icon.toBitmapOrNull(size, size, Bitmap.Config.ARGB_8888) ?:
         Resources.getSystem().getDrawable(android.R.drawable.sym_def_app_icon).toBitmap(size, size)

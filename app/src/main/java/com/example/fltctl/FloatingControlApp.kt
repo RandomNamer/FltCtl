@@ -6,7 +6,6 @@ import android.app.Application
 import android.content.Context
 import android.os.Bundle
 import java.lang.ref.WeakReference
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CopyOnWriteArraySet
 
 class FloatingControlApp: Application() {
@@ -16,18 +15,25 @@ class FloatingControlApp: Application() {
     }
 }
 
-@SuppressLint("StaticFieldLeak")
-object AppMonitor {
+interface AppBackgroundListener {
+    fun onAppBackground() {}
+    fun onAppForeground() {}
+}
 
-    interface AppBackgroundListener {
-        fun onAppBackground() {}
-        fun onAppForeground() {}
-    }
+interface IAppMonitorService {
+    val appContext: Context
+    val topActivity: WeakReference<Activity>
+    fun addListener(l: AppBackgroundListener)
+    fun removeListener(l: AppBackgroundListener)
+}
+
+@SuppressLint("StaticFieldLeak")
+object AppMonitor: IAppMonitorService {
 
     @JvmStatic
     private var applicationRef = WeakReference<Application>(null)
 
-    val appContext: Context
+    override val appContext: Context
         get() = applicationRef.get()?.applicationContext ?: throw IllegalStateException("Current application ref is null")
 
     private val listeners = CopyOnWriteArraySet<AppBackgroundListener>()
@@ -51,7 +57,7 @@ object AppMonitor {
                 if (!isInForeground)
                     listeners.forEach { it.onAppForeground() }
                     isInForeground = true
-                topActivity = activity
+                _topActivity = activity
             }
         }
 
@@ -87,26 +93,27 @@ object AppMonitor {
     @JvmStatic
     private val startedActivities = mutableListOf<Activity>()
 
+    override val topActivity: WeakReference<Activity>
+        get() = WeakReference(_topActivity)
+
     @JvmStatic
-    var topActivity: Activity? = null
+    var _topActivity: Activity? = null
         private set
 
     @JvmStatic
     private var isInForeground = false
 
-    private val currentActivity: Activity?
-        get() = topActivity
 
-    fun onAppCreate(inst: Application) {
+    internal fun onAppCreate(inst: Application) {
         inst.registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
         applicationRef = WeakReference(inst)
     }
 
-    fun addListener(l: AppBackgroundListener) {
+    override fun addListener(l: AppBackgroundListener) {
         listeners.add(l)
     }
 
-    fun removeListener(l: AppBackgroundListener) {
+    override fun removeListener(l: AppBackgroundListener) {
         listeners.remove(l)
     }
 }

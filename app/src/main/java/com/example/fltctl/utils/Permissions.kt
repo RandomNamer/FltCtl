@@ -8,6 +8,7 @@ import android.os.Binder
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import com.example.fltctl.AppBackgroundListener
 import com.example.fltctl.AppMonitor
 import com.example.fltctl.controls.service.FloatingControlAccessibilityService
 
@@ -54,7 +55,7 @@ fun hasEnabledAccessibilityService(context: Context, serviceClass: Class<out Acc
 
 fun requestAccessibilityPermission(context: Context, serviceClass: Class<AccessibilityService>, onResult: (Boolean) -> Unit) {
 
-    AppMonitor.addListener(object: AppMonitor.AppBackgroundListener {
+    AppMonitor.addListener(object: AppBackgroundListener {
         override fun onAppBackground() {}
 
         override fun onAppForeground() {
