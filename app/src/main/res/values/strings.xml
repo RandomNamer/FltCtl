@@ -6,8 +6,8 @@
     <string name="show_wnd_in_app">Show Controls</string>
     <string name="expand">Expand</string>
     <string name="collapse">Collapse</string>
-    <string name="controlDisplayName_default_volume">Default Volume Control</string>
-    <string name="controlDisplayName_volume_turn_page">Volume Control (turning page style)</string>
+    <string name="controlDisplayName_default_volume">Default Turn Page Control</string>
+    <string name="controlDisplayName_volume_turn_page">Debug Control</string>
     <string name="controlDisplayName_vert_turn_page">TikTok Auto Turn Page</string>
     <string name="control_card_currently_selected">Current: </string>
     <string name="control_card_title">Select a floating control</string>

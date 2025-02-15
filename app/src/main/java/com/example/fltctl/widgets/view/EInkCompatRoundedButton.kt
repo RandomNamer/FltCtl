@@ -128,8 +128,8 @@ open class EInkCompatRoundedButton @JvmOverloads constructor(
     private fun createEInkModeBackground(): Drawable {
         return StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_pressed), colorDrawableWithRoundedCorner(Color.BLACK))
-            addState(intArrayOf(-android.R.attr.state_pressed), colorDrawableWithRoundedCorner(Color.TRANSPARENT))
-            addState(intArrayOf(), colorDrawableWithRoundedCorner(Color.TRANSPARENT))
+            addState(intArrayOf(-android.R.attr.state_pressed), colorDrawableWithRoundedCorner(Color.WHITE.withAlpha(0.35f)))
+            addState(intArrayOf(), colorDrawableWithRoundedCorner(Color.WHITE.withAlpha(0.35f)))
         }
     }
 

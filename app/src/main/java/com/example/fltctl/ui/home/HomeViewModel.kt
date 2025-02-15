@@ -2,13 +2,11 @@ package com.example.fltctl.ui.home
 
 import android.content.Context
 import android.util.Log
-import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.fltctl.AppMonitor
 import com.example.fltctl.SettingKeys
-import com.example.fltctl.controls.arch.FloatingControl
 import com.example.fltctl.settings
 import com.example.fltctl.controls.arch.FloatingControlManager
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +22,8 @@ data class HomeUIState(
 
 data class StateFromSetting(
     val enabled: Boolean = false,
-    val eInkModeEnabled: Boolean = false
+    val eInkModeEnabled: Boolean = false,
+    val alwaysShowWindow: Boolean = false
 )
 
 data class ControlSelection(
@@ -44,7 +43,7 @@ class HomeViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUIState())
 
-    private val _isWindowShowing = MutableStateFlow(false)
+    private var _isWindowShowing = false
 
     private var allPermissionsClear = false
 
@@ -53,17 +52,17 @@ class HomeViewModel : ViewModel() {
             val settingsFlow = AppMonitor.appContext.settings.data.map {
                 StateFromSetting(
                     enabled = it[SettingKeys.ENABLED] ?: false,
-                    eInkModeEnabled = it[SettingKeys.UI_EINK_MODE] ?: false
+                    eInkModeEnabled = it[SettingKeys.UI_EINK_MODE] ?: false,
+                    alwaysShowWindow = it[SettingKeys.ALWAYS_SHOW_WINDOW]?: false
                 )
             }
             combine(
                 settingsFlow,
-                _isWindowShowing,
                 FloatingControlManager.controlStateFlow,
-            ) { stateFromSetting, windowShowing, controlList ->
+            ) { stateFromSetting, controlList ->
                 _uiState.value.copy(
                     enabled = stateFromSetting.enabled && allPermissionsClear,
-                    isShowing = windowShowing,
+                    isShowing = stateFromSetting.alwaysShowWindow,
                     controlSelectionList = controlList,
                     eInkModeEnabled = stateFromSetting.eInkModeEnabled
                 )
@@ -88,7 +87,7 @@ class HomeViewModel : ViewModel() {
 
     private fun onEnableStateChanged(enable: Boolean) {
         if (enable) {
-            if (_isWindowShowing.value) FloatingControlManager.tryShowWindowWithCurrentControl()
+            if (_isWindowShowing) FloatingControlManager.tryShowWindowWithCurrentControl()
         } else {
             FloatingControlManager.closeWindow()
             //Which window show state (checkbox) should not change
@@ -96,16 +95,18 @@ class HomeViewModel : ViewModel() {
     }
 
     fun toggleShowWindow(show: Boolean) {
-        if (show) FloatingControlManager.tryShowWindowWithCurrentControl {
-            _isWindowShowing.value = it
+        viewModelScope.launch { AppMonitor.appContext.settings.edit { it[SettingKeys.ALWAYS_SHOW_WINDOW] = show } }
+        if (show) {
+            FloatingControlManager.tryShowWindowWithCurrentControl()
         } else {
             FloatingControlManager.closeWindow()
-            _isWindowShowing.value = false
         }
     }
 
     fun onSelectControl(key: String) {
-        FloatingControlManager.selectControl(key)
+        viewModelScope.launch {
+            AppMonitor.appContext.settings.edit { it[SettingKeys.CURRENT_CONTROL] = key }
+        }
     }
 
     fun onClickConfigureControl(key: String, context: Context) {

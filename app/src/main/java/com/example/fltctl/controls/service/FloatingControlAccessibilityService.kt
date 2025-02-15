@@ -9,6 +9,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.graphics.Path
 import android.graphics.PointF
+import com.example.fltctl.controls.service.appaware.AppTriggerManager
 
 class FloatingControlAccessibilityService: AccessibilityService(), RequireAccessibilityServiceActions {
     companion object {
@@ -19,6 +20,9 @@ class FloatingControlAccessibilityService: AccessibilityService(), RequireAccess
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
 //        Log.i(TAG, event.toString())
+        if (event != null) {
+            AppTriggerManager.onAccessibilityEvent(event)
+        }
 //        cachedRootNode = event?.source?.window?.root
     }
 
@@ -43,6 +47,8 @@ class FloatingControlAccessibilityService: AccessibilityService(), RequireAccess
         ActionPerformer.onServiceDisconnect()
         super.onDestroy()
     }
+
+
 
     private fun turnPageHorizontally(forward: Boolean) {
         val result = findPageBy(rootInActiveWindow)?.run {
@@ -102,4 +108,5 @@ class FloatingControlAccessibilityService: AccessibilityService(), RequireAccess
         turnPageVertically(forward)
     }
 
+    override fun queryFocusedApp(): String? = rootInActiveWindow?.packageName?.toString()
 }

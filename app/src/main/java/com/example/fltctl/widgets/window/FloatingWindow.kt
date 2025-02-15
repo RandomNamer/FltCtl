@@ -153,6 +153,7 @@ open class FloatingWindow(private val context: Context) {
             Log.e(TAG, "Cannot show window when screen is off")
             return false
         }
+        if (isShowing) return false
         (decorView ?: DecorView(context).also { decorView = it }).run {
             removeAllViews()
             addView(with ?: createDefaultView())
@@ -172,6 +173,7 @@ open class FloatingWindow(private val context: Context) {
             }, 100L)
         }
         isShowing = true
+        Log.d(TAG, "Window $this shown")
         return true
     }
 
@@ -189,6 +191,7 @@ open class FloatingWindow(private val context: Context) {
         decorView = null
         isShowing = false
         ConfigurationHelper.removeAllOnChangeListeners()
+        Log.d(TAG, "Window $this hidden")
     }
 
     @UiThread

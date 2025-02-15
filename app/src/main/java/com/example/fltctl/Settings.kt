@@ -27,6 +27,7 @@ object SettingKeys {
     val WINDOW_ADHERE_TO_EDGE = booleanPreferencesKey("window_adhere_to_edge")
     val CURRENT_CONTROL = stringPreferencesKey("current_control")
     val ENABLED = booleanPreferencesKey("enabled")
+    val ALWAYS_SHOW_WINDOW = booleanPreferencesKey("always_show_window")
     val LAST_WINDOW_POSITION_X = floatPreferencesKey("wnd_pos_x")
     val LAST_WINDOW_POSITION_Y = floatPreferencesKey("wnd_pos_y")
     val ACTIVITY_LIST_SORTING = booleanPreferencesKey("act_list_sort")

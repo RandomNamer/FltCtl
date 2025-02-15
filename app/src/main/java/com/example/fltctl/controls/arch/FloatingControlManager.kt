@@ -3,25 +3,32 @@ package com.example.fltctl.controls.arch
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Point
+import android.util.Log
 import android.view.View
+import androidx.annotation.MainThread
 import androidx.annotation.StringRes
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.Lifecycle
 import com.example.fltctl.*
-import com.example.fltctl.controls.DefaultVolumeKeyControl
-import com.example.fltctl.controls.TuringPageByVolumeKeyControl
+import com.example.fltctl.controls.DefaultTurnPageControl
+import com.example.fltctl.controls.DebugControl
 import com.example.fltctl.controls.VerticalTurnPageControl
 import com.example.fltctl.controls.WakeLockControl
 import com.example.fltctl.ui.home.ControlSelection
+import com.example.fltctl.utils.logWithStacktrace
 import com.example.fltctl.widgets.window.FloatingWindow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KClass
 
 
@@ -41,11 +48,11 @@ object FloatingControlManager {
     private val controls by lazy{ mutableListOf<FloatingControlInfo>(
         FloatingControlInfo(
             displayName = getString(R.string.controlDisplayName_default_volume),
-            klass = DefaultVolumeKeyControl::class
+            klass = DefaultTurnPageControl::class
         ),
         FloatingControlInfo(
             displayName = getString(R.string.controlDisplayName_volume_turn_page),
-            klass = TuringPageByVolumeKeyControl::class
+            klass = DebugControl::class
         ),
         FloatingControlInfo(
             displayName = getString(R.string.controlDisplayName_vert_turn_page),
@@ -75,23 +82,32 @@ object FloatingControlManager {
         get() = settingsFlow.map { pref ->
             val currentSelected = pref[SettingKeys.CURRENT_CONTROL]
             getControlsUiList().map {
-                currentSelectedControl = controls.find { c -> c.key == currentSelected }
+//                currentSelectedControl = controls.find { c -> c.key == currentSelected }
                 it.copy(selected = it.key == currentSelected)
             }
         }
 
-    private val settingsFlow = AppMonitor.appContext.settings.data
+    private val settingsFlow: Flow<Preferences>
+        get() = AppMonitor.appContext.settings.data
 
     private var lastWindowPositionX = 0f
     private var lastWindowPositionY = 0f
 
+    private var enableAlwaysShowWindow = false
+
     init {
-        coroutineScope.launch {
-            delay(1000L)
-            settingsFlow.collect {
+        coroutineScope.launch(Dispatchers.Main) {
+//            delay(1000L)
+            settingsFlow.mapNotNull {
                 lastWindowPositionX = it[SettingKeys.LAST_WINDOW_POSITION_X] ?: 0.1f
                 lastWindowPositionY = it[SettingKeys.LAST_WINDOW_POSITION_Y] ?: 0.1f
                 inEInkMode = it[SettingKeys.UI_EINK_MODE] ?: false
+                enableAlwaysShowWindow = it[SettingKeys.ALWAYS_SHOW_WINDOW] ?: false
+                it[SettingKeys.CURRENT_CONTROL]
+            }.distinctUntilChanged().collect {
+                if (it != currentSelectedControl?.key) {
+                    selectControlByKey(it)
+                }
             }
         }
     }
@@ -105,17 +121,33 @@ object FloatingControlManager {
 
     }
 
-    fun selectControl(key: String) {
+    fun temporarySelectControl(key: String) {
+        selectControlByKey(key)
+    }
+
+    private fun selectControlByKey(key: String) {
         val target = controls.find { it.key == key }
-        target?.run {
-            coroutineScope.launch {
-                AppMonitor.appContext.settings.edit {
-                    it[SettingKeys.CURRENT_CONTROL] = key
-                }
-            }
+        target?.let {
+            selectControlInternal(it)
         }
     }
 
+    private fun selectControlInternal(target: FloatingControlInfo) {
+        logWithStacktrace("Select control: ${target}", 7)
+        Thread.currentThread().stackTrace
+        currentSelectedControl = target
+        closeWindow()
+        currentControlInstance?.destroy()
+        currentControlInstance = null
+//        currentControlInstance = createFloatingControl(target, AppMonitor.appContext)
+        if (enableAlwaysShowWindow) {
+            tryShowWindowWithCurrentControl()
+        }
+
+    }
+
+
+    @MainThread
     fun tryShowWindowWithCurrentControl(onResult: ((Boolean) -> Unit)? = null) {
         (window ?: FloatingWindow(AppMonitor.appContext).also { window = it }).run {
             val result = show(getCurrentViewOutOfWindow(AppMonitor.appContext), Point(
@@ -145,10 +177,14 @@ object FloatingControlManager {
 
     fun closeWindow(rememberLocation: Boolean = true) {
         window?.hide { windowState ->
-            if (rememberLocation) coroutineScope.launch {
-                AppMonitor.appContext.settings.edit {
-                    it[SettingKeys.LAST_WINDOW_POSITION_X] = windowState.relativePosition.first
-                    it[SettingKeys.LAST_WINDOW_POSITION_Y] = windowState.relativePosition.second
+            if (rememberLocation) {
+                lastWindowPositionX = windowState.relativePosition.first
+                lastWindowPositionY = windowState.relativePosition.second
+                coroutineScope.launch {
+                    AppMonitor.appContext.settings.edit {
+                        it[SettingKeys.LAST_WINDOW_POSITION_X] = windowState.relativePosition.first
+                        it[SettingKeys.LAST_WINDOW_POSITION_Y] = windowState.relativePosition.second
+                    }
                 }
             }
         }

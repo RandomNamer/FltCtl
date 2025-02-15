@@ -12,14 +12,14 @@ import com.example.fltctl.controls.arch.FloatingControl
 import com.example.fltctl.controls.service.ActionPerformer
 import com.example.fltctl.widgets.view.*
 
-class DefaultVolumeKeyControl: FloatingControl() {
+class DefaultTurnPageControl: FloatingControl() {
 
     companion object {
         private val BUTTON_PADDING = 10.takeDp()
     }
 
-    private lateinit var volumeUp: EInkCompatRoundedButton
-    private lateinit var volumeDown: EInkCompatRoundedButton
+    private lateinit var up: EInkCompatRoundedButton
+    private lateinit var down: EInkCompatRoundedButton
     private var backgroundAlpha = 0.6f
     private var buttonSize = 40.takeDp()
         set(value) {
@@ -46,7 +46,7 @@ class DefaultVolumeKeyControl: FloatingControl() {
                 setOnClickListener {
                     ActionPerformer.tryTurnPage(true)
                 }
-            }.also { volumeUp = it })
+            }.also { up = it })
             addView(EInkCompatIconButton(context).apply {
                 layoutParams = LinearLayout.LayoutParams(buttonSize, buttonSize)
                 margin(start = BUTTON_PADDING, top = 0, end = BUTTON_PADDING, bottom = BUTTON_PADDING)
@@ -56,7 +56,7 @@ class DefaultVolumeKeyControl: FloatingControl() {
                 setOnClickListener {
                     ActionPerformer.tryTurnPage(false)
                 }
-            }.also { volumeDown = it })
+            }.also { down = it })
         }
     }
 
@@ -81,7 +81,5 @@ class DefaultVolumeKeyControl: FloatingControl() {
         rootView?.background = if (isInEInkMode) containerBackgroundEInk else containerBackgroundNormal
         rootView?.background?.alpha = if (isEInk) 255 else (backgroundAlpha * 255).toInt()
     }
-
-
 
 }

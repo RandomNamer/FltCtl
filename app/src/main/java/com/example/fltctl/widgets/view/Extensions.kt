@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import androidx.annotation.ColorInt
 import androidx.annotation.Px
 import android.graphics.Color
+import androidx.annotation.FloatRange
 import kotlin.math.roundToInt
 
 fun Number.takeDp(): Int = takeDpAsFloat().roundToInt()
@@ -89,14 +90,19 @@ fun ViewGroup.MarginLayoutParams.margin(
 
 fun Context.isRTL(): Boolean = resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL
 
+fun Int.withAlpha(@FloatRange(0.0, 1.0) alpha: Float): Int {
+    val a = (alpha * 255).roundToInt() shl 24
+    val rgb = 0x00ffffff and this
+    return a + rgb
+}
 
 fun createRoundedCornerColorDrawable(@ColorInt color: Int,cornerRadius: Float): Drawable = GradientDrawable().apply {
     setColor(color)
     setCornerRadius(cornerRadius)
 }
 
-fun createRoundedCornerEInkDrawable(cornerRadius: Float): Drawable = GradientDrawable().apply {
-    setColor(0x80FFFFFF.toInt())
+fun createRoundedCornerEInkDrawable(cornerRadius: Float, alpha: Float = 0.35f): Drawable = GradientDrawable().apply {
+    setColor(Color.WHITE.withAlpha(alpha))
     setCornerRadius(cornerRadius)
     setStroke(2.takeDp(), Color.BLACK)
 }

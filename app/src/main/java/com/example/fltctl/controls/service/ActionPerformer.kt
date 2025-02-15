@@ -24,6 +24,7 @@ interface RequireAccessibilityServiceActions {
     fun pressBack()
     fun tryTurnPage(forward: Boolean)
     fun tryTurnPageVertically(forward: Boolean)
+    fun queryFocusedApp(): String?
 }
 
 private interface AccessibilityServiceActionWrapper: RequireAccessibilityServiceActions {
@@ -63,6 +64,8 @@ object ActionPerformer:
         override fun tryTurnPageVertically(forward: Boolean) {
             accessibilityServiceRef.get()?.tryTurnPageVertically(forward)
         }
+
+        override fun queryFocusedApp(): String? = accessibilityServiceRef.get()?.queryFocusedApp()
 
     }
 
