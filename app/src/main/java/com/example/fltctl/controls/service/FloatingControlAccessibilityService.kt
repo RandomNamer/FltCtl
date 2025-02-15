@@ -18,7 +18,7 @@ class FloatingControlAccessibilityService: AccessibilityService(), RequireAccess
     private var cachedRootNode: AccessibilityNodeInfo? = null
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        Log.i(TAG, event.toString())
+//        Log.i(TAG, event.toString())
 //        cachedRootNode = event?.source?.window?.root
     }
 

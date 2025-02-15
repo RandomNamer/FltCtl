@@ -2,6 +2,7 @@ package com.example.fltctl.controls
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.view.View
 import android.view.ViewGroup.LayoutParams
 import android.widget.FrameLayout
@@ -21,9 +22,18 @@ class DefaultVolumeKeyControl: FloatingControl() {
     private lateinit var volumeDown: EInkCompatRoundedButton
     private var backgroundAlpha = 0.6f
     private var buttonSize = 40.takeDp()
+        set(value) {
+            beforeButtonSizeChange()
+            field = value
+        }
     private val containerCornerRadius: Float
         get() = buttonSize / 2f + BUTTON_PADDING
+
+    private lateinit var containerBackgroundNormal: Drawable
+    private lateinit var containerBackgroundEInk: Drawable
+
     override fun onCreateView(context: Context): View {
+        recreateBackgrounds()
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
@@ -55,13 +65,20 @@ class DefaultVolumeKeyControl: FloatingControl() {
     }
 
     override fun onEInkConfigChanged(isEInk: Boolean) {
+        super.onEInkConfigChanged(isEInk)
         fitViewWithEInkMode(isEInk)
+    }
+    private fun beforeButtonSizeChange() {
+        recreateBackgrounds()
+    }
+
+    private fun recreateBackgrounds() {
+        containerBackgroundNormal = createRoundedCornerColorDrawable(Color.WHITE, containerCornerRadius)
+        containerBackgroundEInk = createRoundedCornerEInkDrawable(containerCornerRadius)
     }
 
     private fun fitViewWithEInkMode(isEInk: Boolean) {
-        volumeUp.isInEInkMode = isEInk
-        volumeDown.isInEInkMode = isEInk
-        rootView?.background = if (!isInEInkMode) createRoundedCornerColorDrawable(Color.WHITE, containerCornerRadius) else createRoundedCornerEInkDrawable(containerCornerRadius)
+        rootView?.background = if (isInEInkMode) containerBackgroundEInk else containerBackgroundNormal
         rootView?.background?.alpha = if (isEInk) 255 else (backgroundAlpha * 255).toInt()
     }
 

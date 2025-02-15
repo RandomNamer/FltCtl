@@ -96,7 +96,7 @@ fun createRoundedCornerColorDrawable(@ColorInt color: Int,cornerRadius: Float): 
 }
 
 fun createRoundedCornerEInkDrawable(cornerRadius: Float): Drawable = GradientDrawable().apply {
-    setColor(Color.WHITE)
+    setColor(0x80FFFFFF.toInt())
     setCornerRadius(cornerRadius)
     setStroke(2.takeDp(), Color.BLACK)
 }

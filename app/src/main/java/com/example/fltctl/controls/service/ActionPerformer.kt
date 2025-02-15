@@ -1,6 +1,5 @@
 package com.example.fltctl.controls.service
 
-import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.media.AudioManager
 import android.view.KeyEvent
@@ -12,6 +11,12 @@ import java.lang.ref.WeakReference
 interface CommonActions {
     fun pressVolumeUp()
     fun pressVolumeDown()
+}
+
+interface WakeLockActions {
+    fun tryAcquireWakeLockIndefinitely()
+    fun tryAcquireWakeLock(timeout: Long)
+    fun releaseWakeLock()
 }
 
 interface RequireAccessibilityServiceActions {
@@ -27,7 +32,10 @@ private interface AccessibilityServiceActionWrapper: RequireAccessibilityService
     fun onServiceDisconnect()
 }
 
-object ActionPerformer: CommonActions, AccessibilityServiceActionWrapper by AccessibilityServiceActionWrapperImpl {
+object ActionPerformer:
+    CommonActions,
+    WakeLockActions by WakeLockHelper(AppMonitor.appContext),
+    AccessibilityServiceActionWrapper by AccessibilityServiceActionWrapperImpl {
 
     private object AccessibilityServiceActionWrapperImpl: AccessibilityServiceActionWrapper {
 

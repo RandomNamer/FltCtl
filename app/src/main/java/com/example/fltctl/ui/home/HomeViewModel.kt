@@ -11,6 +11,7 @@ import com.example.fltctl.SettingKeys
 import com.example.fltctl.controls.arch.FloatingControl
 import com.example.fltctl.settings
 import com.example.fltctl.controls.arch.FloatingControlManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -19,6 +20,11 @@ data class HomeUIState(
     val isShowing: Boolean = false,
     val eInkModeEnabled: Boolean = false,
     val controlSelectionList: List<ControlSelection> = listOf()
+)
+
+data class StateFromSetting(
+    val enabled: Boolean = false,
+    val eInkModeEnabled: Boolean = false
 )
 
 data class ControlSelection(
@@ -40,10 +46,12 @@ class HomeViewModel : ViewModel() {
 
     private val _isWindowShowing = MutableStateFlow(false)
 
+    private var allPermissionsClear = false
+
     init {
-        viewModelScope.launch {
+        viewModelScope.launch (Dispatchers.IO) {
             val settingsFlow = AppMonitor.appContext.settings.data.map {
-                _uiState.value.copy(
+                StateFromSetting(
                     enabled = it[SettingKeys.ENABLED] ?: false,
                     eInkModeEnabled = it[SettingKeys.UI_EINK_MODE] ?: false
                 )
@@ -53,17 +61,38 @@ class HomeViewModel : ViewModel() {
                 _isWindowShowing,
                 FloatingControlManager.controlStateFlow,
             ) { stateFromSetting, windowShowing, controlList ->
-                stateFromSetting.copy(isShowing = windowShowing, controlSelectionList = controlList)
+                _uiState.value.copy(
+                    enabled = stateFromSetting.enabled && allPermissionsClear,
+                    isShowing = windowShowing,
+                    controlSelectionList = controlList,
+                    eInkModeEnabled = stateFromSetting.eInkModeEnabled
+                )
             }.catch {
                 Log.e(TAG, "State error: $it")
-            }.collect {
+            }.distinctUntilChanged().collect {
+                Log.d(TAG, "State mutate: $it")
                 _uiState.value = it
             }
         }
+        viewModelScope.launch(Dispatchers.Main) {
+            uiState.map { it.enabled }.distinctUntilChanged().collect {
+                onEnableStateChanged(it)
+            }
+        }
+
     }
 
     fun toggleEnable(enable: Boolean) {
         viewModelScope.launch{ AppMonitor.appContext.settings.edit { it[SettingKeys.ENABLED] = enable } }
+    }
+
+    private fun onEnableStateChanged(enable: Boolean) {
+        if (enable) {
+            if (_isWindowShowing.value) FloatingControlManager.tryShowWindowWithCurrentControl()
+        } else {
+            FloatingControlManager.closeWindow()
+            //Which window show state (checkbox) should not change
+        }
     }
 
     fun toggleShowWindow(show: Boolean) {
@@ -83,5 +112,15 @@ class HomeViewModel : ViewModel() {
         FloatingControlManager.openConfigureControlPage("", context)
     }
 
-
+    fun onResumeCheckersComplete(
+        hasOverlaysPermission: Boolean,
+        hasAccessibilityPermission: Boolean,
+    ) {
+        allPermissionsClear = hasAccessibilityPermission && hasOverlaysPermission
+        viewModelScope.launch {
+            if (allPermissionsClear) AppMonitor.appContext.settings.data.collectLatest {
+                _uiState.value = _uiState.value.copy(enabled = it[SettingKeys.ENABLED] ?: false)
+            }
+        }
+    }
 }

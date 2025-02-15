@@ -2,7 +2,7 @@
     <string name="app_name">Floating Controls</string>
     <string name="eink_mode">E-Ink Mode</string>
     <string name="about">About…</string>
-    <string name="floating_wnd_switch">Enable Floating Control</string>
+    <string name="floating_wnd_switch">Floating Control Enabled</string>
     <string name="show_wnd_in_app">Show Controls</string>
     <string name="expand">Expand</string>
     <string name="collapse">Collapse</string>
@@ -33,5 +33,6 @@
     <string name="app_selection_select_activity">Launch an activity</string>
     <string name="app_selection_goto_settings">Details…</string>
     <string name="app_selection_activity_counts">%1$d of total %2$d are exported activities. </string>
+    <string name="controlDisplayName_wake_lock">WakeLock</string>
     <string name="cancel">Cancel</string>
 </resources>

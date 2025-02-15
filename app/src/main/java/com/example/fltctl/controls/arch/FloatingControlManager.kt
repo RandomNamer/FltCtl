@@ -11,6 +11,7 @@ import com.example.fltctl.*
 import com.example.fltctl.controls.DefaultVolumeKeyControl
 import com.example.fltctl.controls.TuringPageByVolumeKeyControl
 import com.example.fltctl.controls.VerticalTurnPageControl
+import com.example.fltctl.controls.WakeLockControl
 import com.example.fltctl.ui.home.ControlSelection
 import com.example.fltctl.widgets.window.FloatingWindow
 import kotlinx.coroutines.CoroutineScope
@@ -49,6 +50,10 @@ object FloatingControlManager {
         FloatingControlInfo(
             displayName = getString(R.string.controlDisplayName_vert_turn_page),
             klass = VerticalTurnPageControl::class
+        ),
+        FloatingControlInfo(
+            displayName = getString(R.string.controlDisplayName_wake_lock),
+            klass = WakeLockControl::class
         )
     ) }
 
@@ -84,8 +89,8 @@ object FloatingControlManager {
         coroutineScope.launch {
             delay(1000L)
             settingsFlow.collect {
-                lastWindowPositionX = it[SettingKeys.LAST_WINDOW_POSITION_X] ?: 0f
-                lastWindowPositionY = it[SettingKeys.LAST_WINDOW_POSITION_Y] ?: 0f
+                lastWindowPositionX = it[SettingKeys.LAST_WINDOW_POSITION_X] ?: 0.1f
+                lastWindowPositionY = it[SettingKeys.LAST_WINDOW_POSITION_Y] ?: 0.1f
                 inEInkMode = it[SettingKeys.UI_EINK_MODE] ?: false
             }
         }

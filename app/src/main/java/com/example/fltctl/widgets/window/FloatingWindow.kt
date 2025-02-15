@@ -9,20 +9,22 @@ import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.util.Log
-import android.view.*
+import android.view.Display
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.Surface
+import android.view.View
+import android.view.ViewConfiguration
+import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.annotation.UiThread
 import androidx.core.math.MathUtils
-import androidx.datastore.preferences.core.edit
-import com.example.fltctl.AppMonitor
-import com.example.fltctl.SettingKeys
-import com.example.fltctl.commonSettingScope
-import com.example.fltctl.settings
-import com.example.fltctl.utils.hasEnabledAccessibilityService
-import com.example.fltctl.widgets.view.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
+import com.example.fltctl.widgets.view.navBarHeight
+import com.example.fltctl.widgets.view.screenHeight
+import com.example.fltctl.widgets.view.screenWidth
+import com.example.fltctl.widgets.view.statusBarHeight
+import com.example.fltctl.widgets.view.takeDp
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -167,7 +169,7 @@ open class FloatingWindow(private val context: Context) {
                 updateScreenParams {
                     restoreWindowPosition()
                 }
-            }, 0L)
+            }, 100L)
         }
         isShowing = true
         return true

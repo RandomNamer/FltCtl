@@ -4,16 +4,13 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.*
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.PaintDrawable
 import android.graphics.drawable.RippleDrawable
 import android.graphics.drawable.StateListDrawable
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.View
 import android.view.ViewOutlineProvider
-import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.ImageButton
 import androidx.annotation.CallSuper
 import androidx.annotation.ColorInt
 import kotlin.math.absoluteValue
@@ -23,19 +20,25 @@ open class EInkCompatRoundedButton @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = android.R.attr.borderlessButtonStyle
-): FrameLayout(context, attrs, defStyleAttr) {
+): FrameLayout(context, attrs, defStyleAttr), EInkAware {
 
     private var elevationInNormalMode = elevation
 
     /**
      * Initial set value must be called after any setElevation call
      */
-    var isInEInkMode = false
+    var isInEInkMode: Boolean
+        get() = _isInEInkMode
         set(value) {
-            field = value
-            onEInkStateChanged(value)
-            postInvalidate()
+            setEInkState(value)
         }
+    private var _isInEInkMode = false
+
+    override fun setEInkState(state: Boolean) {
+        _isInEInkMode = state
+        onEInkStateChanged(state)
+        postInvalidate()
+    }
 
     @CallSuper
     protected open fun onEInkStateChanged(value: Boolean) {
@@ -110,7 +113,7 @@ open class EInkCompatRoundedButton @JvmOverloads constructor(
     private fun refreshBackground() {
         eInkBackgroundDrawable = createEInkModeBackground()
         normalBackgroundDrawable = createRippleDrawable()
-        background = if (isInEInkMode) eInkBackgroundDrawable else normalBackgroundDrawable
+        background = if (_isInEInkMode) eInkBackgroundDrawable else normalBackgroundDrawable
     }
 
 
@@ -125,8 +128,8 @@ open class EInkCompatRoundedButton @JvmOverloads constructor(
     private fun createEInkModeBackground(): Drawable {
         return StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_pressed), colorDrawableWithRoundedCorner(Color.BLACK))
-            addState(intArrayOf(-android.R.attr.state_pressed), colorDrawableWithRoundedCorner(Color.WHITE))
-            addState(intArrayOf(), colorDrawableWithRoundedCorner(Color.WHITE))
+            addState(intArrayOf(-android.R.attr.state_pressed), colorDrawableWithRoundedCorner(Color.TRANSPARENT))
+            addState(intArrayOf(), colorDrawableWithRoundedCorner(Color.TRANSPARENT))
         }
     }
 
@@ -134,7 +137,7 @@ open class EInkCompatRoundedButton @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (isInEInkMode) canvas.drawBorderWithRoundCorner()
+        if (_isInEInkMode) canvas.drawBorderWithRoundCorner()
     }
 
     private fun Canvas.drawBorderWithRoundCorner() {

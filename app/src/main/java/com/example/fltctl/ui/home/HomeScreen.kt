@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.ContentAlpha
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.*
@@ -16,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -92,7 +94,7 @@ fun HomeScreen(
        ) {
            SwitchCard(
                color = cardColor,
-               switched = state.enabled && hasOverlaysPermission(LocalContext.current),
+               switched = state.enabled,
                checked = state.isShowing,
                onSwitched = { turnOn ->
                    if (turnOn) {
@@ -320,12 +322,13 @@ fun SwitchCard(
             Switch(checked = switched, onCheckedChange = onSwitched, colors = SwitchDefaults.colors(uncheckedTrackColor = Color.White))
         }
         Row(modifier = Modifier
+            .alpha(if (switched) 1f else ContentAlpha.disabled)
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 0.dp),
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(checked = checked, onCheckedChange = onChecked)
+            Checkbox(checked = checked, onCheckedChange = onChecked, enabled = switched)
             Text(
                 text = stringResource(id = R.string.show_wnd_in_app),
                 textAlign = TextAlign.Start,

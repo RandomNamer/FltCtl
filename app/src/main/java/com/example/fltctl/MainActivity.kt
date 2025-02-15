@@ -1,5 +1,6 @@
 package com.example.fltctl
 
+import android.app.ComponentCaller
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -33,6 +34,8 @@ class MainActivity : BaseComposeActivity() {
 
     private var accessibilityPermissionResultConsumer: ((Boolean) -> Unit)? = null
 
+    private var waitingForActivityResult = false
+
     @Composable
     override fun Content() {
         HomeScreen(
@@ -55,6 +58,7 @@ class MainActivity : BaseComposeActivity() {
                 Uri.parse("package:$packageName")
             )
             try {
+                waitingForActivityResult = true
                 startActivityForResult(intent, REQ_CODE_DRAW_OVERLAY)
             } catch (e: Exception) {
                 Toast.makeText(this, R.string.request_overlay_failed, Toast.LENGTH_LONG).show()
@@ -63,12 +67,24 @@ class MainActivity : BaseComposeActivity() {
     }
 
     private fun requestAccessibilityPermission() {
+        waitingForActivityResult = true
         startActivityForResult(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS, ).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }, REQ_ACCESSIBILITY)
     }
 
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?,
+        caller: ComponentCaller
+    ) {
+        super.onActivityResult(requestCode, resultCode, data, caller)
+        onActivityResult(requestCode, resultCode, data)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        waitingForActivityResult = false
         when (requestCode) {
             REQ_CODE_DRAW_OVERLAY -> {
                 overlayPermissionResultConsumer?.invoke(hasOverlaysPermission(this))
@@ -80,6 +96,14 @@ class MainActivity : BaseComposeActivity() {
             }
             else -> super.onActivityResult(requestCode, resultCode, data)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if(!waitingForActivityResult) vm.onResumeCheckersComplete(
+            hasOverlaysPermission(this),
+            hasEnabledAccessibilityService(this)
+        )
     }
 
     override fun onRequestPermissionsResult(

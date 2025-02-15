@@ -2,13 +2,13 @@ package com.example.fltctl.controls.arch
 
 import android.content.Context
 import android.os.Handler
-import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.CallSuper
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import com.example.fltctl.widgets.view.EInkAware
 
 
 abstract class FloatingControl: LifecycleOwner, View.OnAttachStateChangeListener {
@@ -94,9 +94,24 @@ abstract class FloatingControl: LifecycleOwner, View.OnAttachStateChangeListener
 
     }
 
+    @CallSuper
     protected open fun onEInkConfigChanged(isEInk: Boolean) {
-
+        traverseViewTree { v ->
+            if (v is EInkAware) {
+                v.setEInkState(isEInk)
+            }
+        }
     }
 
+    final fun traverseViewTree(view: View? = rootView, visitor: (View) -> Unit) {
+        if (view != null) {
+            visitor(view)
+        }
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                traverseViewTree(view.getChildAt(i), visitor)
+            }
+        }
+    }
 
 }
