@@ -1,4 +1,4 @@
-package com.example.fltctl.controls.service
+package com.example.fltctl.configs
 
 object PackageNames {
     const val KINDLE = "com.amazon.kindle"

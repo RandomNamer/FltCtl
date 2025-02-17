@@ -5,12 +5,14 @@ import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.view.View
 import android.widget.FrameLayout
+import androidx.lifecycle.Lifecycle
 import com.example.fltctl.R
 import com.example.fltctl.controls.arch.FloatingControl
 import com.example.fltctl.controls.service.ActionPerformer
 import com.example.fltctl.utils.registerScreenInteractiveStateListener
 import com.example.fltctl.widgets.view.EInkCompatIconButton
 import com.example.fltctl.widgets.view.margin
+import com.example.fltctl.widgets.view.setDebouncedOnClickListener
 import com.example.fltctl.widgets.view.takeDp
 import com.example.fltctl.widgets.view.takeDpAsFloat
 
@@ -27,9 +29,9 @@ class WakeLockControl: FloatingControl() {
 
     init {
         registerScreenInteractiveStateListener(lifecycle) { active ->
-            if (wakeLockOn) {
-                if (active) ActionPerformer.tryAcquireWakeLockIndefinitely()
-                else ActionPerformer.releaseWakeLock()
+            if (wakeLockOn && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+//                if (active) ActionPerformer.tryAcquireWakeLockIndefinitely(rootView)
+//                else ActionPerformer.releaseWakeLock()
             }
         }
     }
@@ -44,7 +46,7 @@ class WakeLockControl: FloatingControl() {
             unlockedIcon = resources.getDrawable(R.drawable.baseline_lock_open_24)
             setIcon(unlockedIcon)
             setIconTint(Color.WHITE)
-            setOnClickListener {
+            setDebouncedOnClickListener(3000L) {
                 onClick()
             }
         }.also { button = it }
@@ -59,7 +61,7 @@ class WakeLockControl: FloatingControl() {
         wakeLockOn =!wakeLockOn
         if (wakeLockOn) {
             button.setIcon(lockedIcon)
-            ActionPerformer.tryAcquireWakeLockIndefinitely()
+            ActionPerformer.tryAcquireWakeLockIndefinitely(rootView)
         } else {
             button.setIcon(unlockedIcon)
             ActionPerformer.releaseWakeLock()

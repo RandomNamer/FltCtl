@@ -3,6 +3,7 @@ package com.example.fltctl.controls.service
 import android.content.Context
 import android.media.AudioManager
 import android.view.KeyEvent
+import android.view.View
 import android.view.inputmethod.BaseInputConnection
 import com.example.fltctl.AppMonitor
 import com.example.fltctl.controls.arch.FloatingControlManager
@@ -14,8 +15,8 @@ interface CommonActions {
 }
 
 interface WakeLockActions {
-    fun tryAcquireWakeLockIndefinitely()
-    fun tryAcquireWakeLock(timeout: Long)
+    fun tryAcquireWakeLockIndefinitely(with: View? = null)
+    fun tryAcquireWakeLock(timeout: Long, with: View? = null)
     fun releaseWakeLock()
 }
 

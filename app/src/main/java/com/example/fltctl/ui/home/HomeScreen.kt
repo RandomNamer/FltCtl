@@ -33,9 +33,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.fltctl.AppMonitor
 import com.example.fltctl.R
-import com.example.fltctl.SettingKeys
+import com.example.fltctl.configs.SettingKeys
 import com.example.fltctl.appselection.ui.AppSelectActivity
-import com.example.fltctl.settings
+import com.example.fltctl.configs.settings
 import com.example.fltctl.ui.ColorPaletteActivity
 import com.example.fltctl.ui.settings.SettingsActivity
 import com.example.fltctl.ui.takeProportion
@@ -44,7 +44,6 @@ import com.example.fltctl.utils.hasEnabledAccessibilityService
 import com.example.fltctl.utils.hasOverlaysPermission
 import com.example.fltctl.widgets.composable.*
 import kotlinx.coroutines.launch
-import java.util.*
 
 
 @OptIn(ExperimentalMaterial3Api::class)

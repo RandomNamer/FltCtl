@@ -9,6 +9,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.graphics.Path
 import android.graphics.PointF
+import com.example.fltctl.configs.verticalTurnPageWhitelist
 import com.example.fltctl.controls.service.appaware.AppTriggerManager
 
 class FloatingControlAccessibilityService: AccessibilityService(), RequireAccessibilityServiceActions {

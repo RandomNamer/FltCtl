@@ -6,8 +6,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.fltctl.AppMonitor
-import com.example.fltctl.SettingKeys
-import com.example.fltctl.settings
+import com.example.fltctl.configs.SettingKeys
+import com.example.fltctl.configs.settings
 import com.example.fltctl.controls.arch.FloatingControlManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*

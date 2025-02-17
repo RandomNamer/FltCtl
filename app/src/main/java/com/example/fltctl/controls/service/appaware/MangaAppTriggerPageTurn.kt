@@ -2,14 +2,13 @@ package com.example.fltctl.controls.service.appaware
 
 import android.os.Handler
 import android.os.Looper
-import androidx.datastore.preferences.core.edit
 import com.example.fltctl.AppMonitor
-import com.example.fltctl.SettingKeys
+import com.example.fltctl.configs.SettingKeys
 import com.example.fltctl.controls.DefaultTurnPageControl
 import com.example.fltctl.controls.arch.FloatingControlInfo
 import com.example.fltctl.controls.arch.FloatingControlManager
-import com.example.fltctl.controls.service.PackageNames
-import com.example.fltctl.settings
+import com.example.fltctl.configs.PackageNames
+import com.example.fltctl.configs.settings
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -18,16 +17,21 @@ import kotlinx.coroutines.launch
  * @author zeyu.zyzhang@bytedance.com
  */
 class MangaAppTriggerPageTurn: AppTrigger {
-    override val triggerList: List<String> = listOf(
-        PackageNames.DMZJ,
-        PackageNames.DMZJ_ALT,
-        PackageNames.BCOMIC,
-        PackageNames.DMZJ_FLUTTER,
-        PackageNames.MIHON,
-        PackageNames.COPY,
-        PackageNames.MR,
-        PackageNames.KOTASU,
-    )
+    companion object {
+
+        val mangaAppList = listOf(
+            PackageNames.DMZJ,
+            PackageNames.DMZJ_ALT,
+            PackageNames.BCOMIC,
+            PackageNames.DMZJ_FLUTTER,
+            PackageNames.MIHON,
+            PackageNames.COPY,
+            PackageNames.MR,
+            PackageNames.KOTASU,
+        )
+    }
+    override val triggerList: List<String>
+        get() = mangaAppList
     override val tag: String = this::class.simpleName.toString()
 
     private val mainHandler by lazy { Handler(Looper.getMainLooper()) }

@@ -7,6 +7,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 
+//TODO: get activity lazy
 object AppInfoCache {
 
     data class RetrieveOptions(

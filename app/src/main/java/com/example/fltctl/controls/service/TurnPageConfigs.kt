@@ -3,6 +3,7 @@ package com.example.fltctl.controls.service
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.os.bundleOf
+import com.example.fltctl.configs.PackageNames
 import com.example.fltctl.widgets.view.takeDpAsFloat
 
 private const val TAG = "TurnPageConfig"

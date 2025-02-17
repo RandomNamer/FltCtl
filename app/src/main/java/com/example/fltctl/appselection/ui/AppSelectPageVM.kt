@@ -1,25 +1,22 @@
 package com.example.fltctl.appselection.ui
 
-import android.content.pm.ActivityInfo
 import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.fltctl.AppMonitor
-import com.example.fltctl.SettingKeys
+import com.example.fltctl.configs.SettingKeys
 import com.example.fltctl.appselection.model.AppInfo
 import com.example.fltctl.appselection.model.AppInfoCache
 import com.example.fltctl.appselection.model.ConciseActivityInfo
 import com.example.fltctl.appselection.model.filter
-import com.example.fltctl.settings
+import com.example.fltctl.configs.settings
 import com.example.fltctl.ui.toast
 import com.example.fltctl.widgets.composable.DualStateListItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlin.math.exp
 
 data class PackageFilterCriterion(
     val searchKeyword: String? = null,

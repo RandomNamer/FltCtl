@@ -7,4 +7,5 @@ package com.example.fltctl.controls.service.appaware
 
 internal val preloadedTriggers = listOf(
     MangaAppTriggerPageTurn(),
+    MangaAppTriggerWakeLock(),
 )

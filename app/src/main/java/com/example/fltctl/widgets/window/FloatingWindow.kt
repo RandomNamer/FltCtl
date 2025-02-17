@@ -16,6 +16,7 @@ import android.view.Surface
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.annotation.UiThread
@@ -231,6 +232,7 @@ open class FloatingWindow(private val context: Context) {
                 WindowManager.LayoutParams.TYPE_PHONE
             }
             format = PixelFormat.RGBA_8888
+            fitInsetsTypes = WindowInsets.Type.systemBars()
             gravity = Gravity.LEFT or Gravity.TOP
             flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
             width = ViewGroup.LayoutParams.WRAP_CONTENT
@@ -282,7 +284,7 @@ open class FloatingWindow(private val context: Context) {
             EDGE_PADDING,
             0,
             screenWidth - viewWidth - EDGE_PADDING,
-            screenHeight - viewHeight - navBarHeight - EDGE_PADDING
+            screenHeight - viewHeight - EDGE_PADDING
         )
         draggableBound.set(
             viewBound.left - viewWidth,

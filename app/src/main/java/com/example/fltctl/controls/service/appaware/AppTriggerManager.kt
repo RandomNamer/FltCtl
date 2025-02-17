@@ -3,13 +3,11 @@ package com.example.fltctl.controls.service.appaware
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.example.fltctl.controls.service.ActionPerformer
-import com.example.fltctl.controls.service.PackageNames
+import com.example.fltctl.configs.PackageNames
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -74,7 +72,7 @@ object AppTriggerManager {
 
     private val activeTriggers = CopyOnWriteArraySet<AppTrigger>()
 
-    private var focusedAppId: String = ""
+    private var focusedApp: String = ""
 
     private var focusedActivity: String = ""
 
@@ -102,9 +100,9 @@ object AppTriggerManager {
     }
 
     private fun onFocusedAppChanged(packageName: String) {
-        Log.i(TAG, "Focused app changed: $focusedAppId -> $packageName")
+        Log.i(TAG, "Focused app changed: $focusedApp -> $packageName")
         if (excludedPackages.contains(packageName)) {
-            focusedAppId = packageName
+            focusedApp = packageName
             return
         }
         val newActiveTriggers = triggers.filter {
@@ -121,12 +119,12 @@ object AppTriggerManager {
         }
         activeTriggers.clear()
         activeTriggers.addAll(newActiveTriggers)
-        focusedAppId = packageName
+        focusedApp = packageName
     }
 
     private fun resolveTriggers(event: LocalAccessibilityEvent) {
         ActionPerformer.queryFocusedApp()?.let {
-            if (focusedAppId != it) {
+            if (focusedApp != it) {
                 //app change
                 onFocusedAppChanged(it)
             } else {
@@ -151,7 +149,7 @@ object AppTriggerManager {
 
     fun registerTrigger(trigger: AppTrigger) {
         triggers.add(trigger)
-        if (trigger.triggerList.contains(focusedAppId)) {
+        if (trigger.triggerList.contains(focusedApp)) {
             trigger.onActive()
         }
     }

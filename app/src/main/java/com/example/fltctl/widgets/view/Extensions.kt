@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import androidx.annotation.ColorInt
 import androidx.annotation.Px
 import android.graphics.Color
+import android.os.SystemClock
 import androidx.annotation.FloatRange
 import kotlin.math.roundToInt
 
@@ -105,4 +106,16 @@ fun createRoundedCornerEInkDrawable(cornerRadius: Float, alpha: Float = 0.35f): 
     setColor(Color.WHITE.withAlpha(alpha))
     setCornerRadius(cornerRadius)
     setStroke(2.takeDp(), Color.BLACK)
+}
+
+fun View.setDebouncedOnClickListener(interval: Long = 500L, onClick: (View) -> Unit) {
+    var lastClickTime = 0L
+
+    setOnClickListener {
+        val currentTime = SystemClock.elapsedRealtime()
+        if (currentTime - lastClickTime >= interval) {
+            lastClickTime = currentTime
+            onClick(it)
+        }
+    }
 }

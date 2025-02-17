@@ -3,7 +3,6 @@ package com.example.fltctl.controls.arch
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Point
-import android.util.Log
 import android.view.View
 import androidx.annotation.MainThread
 import androidx.annotation.StringRes
@@ -11,6 +10,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.Lifecycle
 import com.example.fltctl.*
+import com.example.fltctl.configs.SettingKeys
+import com.example.fltctl.configs.settings
 import com.example.fltctl.controls.DefaultTurnPageControl
 import com.example.fltctl.controls.DebugControl
 import com.example.fltctl.controls.VerticalTurnPageControl
@@ -20,15 +21,11 @@ import com.example.fltctl.utils.logWithStacktrace
 import com.example.fltctl.widgets.window.FloatingWindow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
-import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KClass
 
 
