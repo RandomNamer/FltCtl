@@ -5,16 +5,50 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ContentAlpha
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.ArrowForwardIos
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.NavigateNext
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -33,16 +67,21 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.fltctl.AppMonitor
 import com.example.fltctl.R
-import com.example.fltctl.configs.SettingKeys
 import com.example.fltctl.appselection.ui.AppSelectActivity
+import com.example.fltctl.configs.SettingKeys
 import com.example.fltctl.configs.settings
-import com.example.fltctl.ui.ColorPaletteActivity
+import com.example.fltctl.tests.ColorPaletteActivity
+import com.example.fltctl.tests.TestEntry
 import com.example.fltctl.ui.settings.SettingsActivity
 import com.example.fltctl.ui.takeProportion
 import com.example.fltctl.ui.theme.isInEInkMode
 import com.example.fltctl.utils.hasEnabledAccessibilityService
 import com.example.fltctl.utils.hasOverlaysPermission
-import com.example.fltctl.widgets.composable.*
+import com.example.fltctl.widgets.composable.BackdropScaffold
+import com.example.fltctl.widgets.composable.EInkCompatCard
+import com.example.fltctl.widgets.composable.EInkCompatExpandableCard
+import com.example.fltctl.widgets.composable.borderBottom
+import com.example.fltctl.widgets.composable.borderTop
 import kotlinx.coroutines.launch
 
 
@@ -443,6 +482,19 @@ fun TopBarMenu(onClickAbout: () -> Unit) {
             },
             onClick = {
                 ctx.startActivity(Intent(ctx, AppSelectActivity::class.java))
+            },
+            leadingIcon = {}, trailingIcon = {}
+        )
+        DropdownMenuItem(
+            text = {
+                Text(
+                    text = "Test Activity",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            },
+            onClick = {
+                TestEntry.enterFltCtlIntegrationTest(ctx)
             },
             leadingIcon = {}, trailingIcon = {}
         )

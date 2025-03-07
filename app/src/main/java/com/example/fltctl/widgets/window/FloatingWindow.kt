@@ -73,8 +73,8 @@ open class FloatingWindow(private val context: Context) {
                 MotionEvent.ACTION_MOVE -> {
                     val pointerId = ev.findPointerIndex(touchDownId)
                     if (pointerId >= 0) {
-                        val offsetX = if (lastX < 0) 0 else (ev.rawX.toInt() - lastX).toInt()
-                        val offsetY = if (lastY < 0) 0 else (ev.rawY.toInt() - lastY).toInt()
+                        val offsetX = if (lastX < 0) 0 else (ev.rawX - lastX).toInt()
+                        val offsetY = if (lastY < 0) 0 else (ev.rawY - lastY).toInt()
                         moveByOffset(offsetX, offsetY)
                         lastX = ev.rawX
                         lastY = ev.rawY
@@ -163,6 +163,7 @@ open class FloatingWindow(private val context: Context) {
         setInitialParams(lp)
         lp.x = toPosition?.x ?: defaultPositionX
         lp.y = toPosition?.y ?: defaultPositionY
+        windowPosition.set(lp.x, lp.y)
         windowManager.addView(decorView, lp)
         relativeWindowPositionY = calculateCurrentWindowPositionRatioY()
         relativeWindowPositionX = calculateCurrentWindowPositionRatioX()
@@ -232,7 +233,9 @@ open class FloatingWindow(private val context: Context) {
                 WindowManager.LayoutParams.TYPE_PHONE
             }
             format = PixelFormat.RGBA_8888
-            fitInsetsTypes = WindowInsets.Type.systemBars()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                fitInsetsTypes = WindowInsets.Type.systemBars()
+            }
             gravity = Gravity.LEFT or Gravity.TOP
             flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
             width = ViewGroup.LayoutParams.WRAP_CONTENT

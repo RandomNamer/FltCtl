@@ -1,6 +1,5 @@
 package com.example.fltctl.configs
 
-import android.health.connect.datatypes.units.Power
 import android.os.PowerManager
 
 /**
@@ -17,7 +16,7 @@ val localWakeLockStrategy: WakeLockStrategy
     get() {
         val noWakelockSupport = EInkDeviceConfigs.eInkBrand == "Onyx"
         return WakeLockStrategy(
-            useView = !noWakelockSupport,
+            useView = false, //Add flags on view does not let screen go dim
             wakeLockType = if(EInkDeviceConfigs.isEInkDevice) PowerManager.FULL_WAKE_LOCK else PowerManager.SCREEN_DIM_WAKE_LOCK,
             writeSettings = noWakelockSupport
         )
