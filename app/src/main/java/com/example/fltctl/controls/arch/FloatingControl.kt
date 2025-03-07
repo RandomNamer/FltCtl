@@ -27,31 +27,34 @@ abstract class FloatingControl: LifecycleOwner, View.OnAttachStateChangeListener
     val handler: Handler?
         get() = rootView?.handler
 
+    private var useExtLifecycleDriver = false
+
     fun setEInkMode(eInk: Boolean) {
         if (isInEInkMode == eInk) return
         isInEInkMode = eInk
         if (rootView != null)  onEInkConfigChanged(eInk)
     }
 
-    override fun onViewAttachedToWindow(v: View) {
-        dispatchStart()
+    final override fun onViewAttachedToWindow(v: View) {
+        if (!useExtLifecycleDriver) dispatchStart()
     }
 
-    override fun onViewDetachedFromWindow(v: View) {
-        dispatchStop()
+    final override fun onViewDetachedFromWindow(v: View) {
+        if (!useExtLifecycleDriver) dispatchStop()
     }
 
-    fun create(context: Context) {
+    fun create(context: Context, useExtLifecycleDriver: Boolean = false) {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        this.useExtLifecycleDriver = useExtLifecycleDriver
         onCreate(context)
     }
 
-    private fun dispatchStart() {
+    internal fun dispatchStart() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
         onStart()
     }
 
-    private fun dispatchStop() {
+    internal fun dispatchStop() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         onStop()
     }

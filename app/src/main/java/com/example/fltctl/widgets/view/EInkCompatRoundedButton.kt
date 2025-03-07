@@ -2,7 +2,11 @@ package com.example.fltctl.widgets.view
 
 import android.content.Context
 import android.content.res.ColorStateList
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Outline
+import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.RippleDrawable
 import android.graphics.drawable.StateListDrawable
@@ -74,7 +78,7 @@ open class EInkCompatRoundedButton @JvmOverloads constructor(
         }
     }
 
-    private var backgroundColor = Color.MAGENTA
+    private var backgroundColor = context.getSystemAccent(SystemPalette.ACCENT1, ColorStrength._500)
 
     private var rippleColor = Color.WHITE
 

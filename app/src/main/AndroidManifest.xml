@@ -4,15 +4,15 @@
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
-
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
 
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
+
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
     </queries>
@@ -21,15 +21,20 @@
         android:name=".FloatingControlApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.FltCtl"
-        android:enableOnBackInvokedCallback="true"
         tools:targetApi="33">
-
+        <activity
+            android:name=".tests.ViewBasedTestsContainerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.wTitleBar"
+            android:configChanges="layoutDirection|screenLayout|orientation|screenSize|keyboard|keyboardHidden"
+            />
         <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false"
@@ -50,7 +55,7 @@
         </service>
 
         <activity
-            android:name=".ui.ColorPaletteActivity"
+            android:name=".tests.ColorPaletteActivity"
             android:exported="false"
             android:label="@string/title_activity_color_palette"
             android:theme="@style/Theme.FltCtl" />
@@ -70,16 +75,16 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
-
         <activity
             android:name=".appselection.ui.AppSelectActivity"
             android:exported="true"
             android:label="@string/title_activity_app_select"
             android:launchMode="standard"
             android:taskAffinity="com.example.fltctl.standalone_appselect"
-            android:theme="@style/Theme.FltCtl" >
+            android:theme="@style/Theme.FltCtl">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
+                <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

@@ -1,9 +1,11 @@
 package com.example.fltctl.controls.service.appaware
 
+import android.os.Build
+import android.os.Build.VERSION_CODES
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
-import com.example.fltctl.controls.service.ActionPerformer
 import com.example.fltctl.configs.PackageNames
+import com.example.fltctl.controls.service.ActionPerformer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -35,6 +37,7 @@ internal val appTriggerSharedScope = CoroutineScope(Dispatchers.Default)
 
 object AppTriggerManager {
 
+    //AccessibilityEvent is reused object by system, which is inherently transient;
     data class LocalAccessibilityEvent(
         val eventType: Int,
         val eventTime: Long,
@@ -49,7 +52,7 @@ object AppTriggerManager {
                 eventTime = event.eventTime,
                 packageName = event.packageName?.toString(),
                 contentChangeTypes = event.contentChangeTypes,
-                windowChangeTypes = event.windowChanges,
+                windowChangeTypes = if (Build.VERSION.SDK_INT >= VERSION_CODES.P) event.windowChanges else -1,
                 className = event.className?.toString(),
             )
         }
@@ -63,7 +66,7 @@ object AppTriggerManager {
 
     private val _eventChannel = Channel<LocalAccessibilityEvent>(Channel.UNLIMITED)
 
-    private val eventFlow = _eventChannel.receiveAsFlow().shareIn(workerScope, SharingStarted.Eagerly, replay = 10)
+    private val eventFlow = _eventChannel.receiveAsFlow().shareIn(workerScope, SharingStarted.Eagerly, replay = 1)
 
     private val windowStateChangedFlow = eventFlow.filter { it.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED }
     private val windowContentChangedFlow = eventFlow.filter { it.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED  }
@@ -159,7 +162,7 @@ object AppTriggerManager {
         trigger.onInactive()
     }
 
-    fun unregisterTriggersByPackage(packageName: String) {
+    fun unregisterAllTriggersOfPackage(packageName: String) {
         triggers.filter { it.triggerList.contains(packageName) }.forEach {
             unregisterTrigger(it)
         }
