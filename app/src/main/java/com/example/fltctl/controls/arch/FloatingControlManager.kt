@@ -9,15 +9,16 @@ import androidx.annotation.StringRes
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.Lifecycle
-import com.example.fltctl.*
+import com.example.fltctl.AppMonitor
+import com.example.fltctl.R
 import com.example.fltctl.configs.SettingKeys
 import com.example.fltctl.configs.settings
-import com.example.fltctl.controls.DefaultTurnPageControl
 import com.example.fltctl.controls.DebugControl
+import com.example.fltctl.controls.DefaultTurnPageControl
 import com.example.fltctl.controls.VerticalTurnPageControl
 import com.example.fltctl.controls.WakeLockControl
 import com.example.fltctl.ui.home.ControlSelection
-import com.example.fltctl.utils.logWithStacktrace
+import com.example.fltctl.utils.logs
 import com.example.fltctl.widgets.window.FloatingWindow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -92,6 +93,8 @@ object FloatingControlManager {
 
     private var enableAlwaysShowWindow = false
 
+    private val log by logs("FloatingControlMan")
+
     init {
         coroutineScope.launch(Dispatchers.Main) {
 //            delay(1000L)
@@ -130,8 +133,7 @@ object FloatingControlManager {
     }
 
     private fun selectControlInternal(target: FloatingControlInfo) {
-        logWithStacktrace("Select control: ${target}", 7)
-        Thread.currentThread().stackTrace
+        log.d("Select control: ${target}")
         currentSelectedControl = target
         closeWindow()
         currentControlInstance?.destroy()

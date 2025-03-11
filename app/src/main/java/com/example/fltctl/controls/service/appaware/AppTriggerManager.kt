@@ -105,7 +105,7 @@ object AppTriggerManager {
     }
 
     private fun onFocusedAppChanged(packageName: String) {
-        log.i("Focused app changed: $focusedApp -> $packageName")
+        log.d("Focused app changed: $focusedApp -> $packageName")
         if (excludedPackages.contains(packageName)) {
             focusedApp = packageName
             return
