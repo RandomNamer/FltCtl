@@ -4,13 +4,13 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.PowerManager
 import android.provider.Settings
-import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.annotation.UiThread
 import com.example.fltctl.configs.WakeLockStrategy
 import com.example.fltctl.configs.localWakeLockStrategy
 import com.example.fltctl.ui.toast
+import com.example.fltctl.utils.logs
 import java.lang.ref.WeakReference
 
 /**
@@ -44,6 +44,8 @@ class WakeLockHelper(private val context: Context): WakeLockActions {
         context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     }
 
+    private val log by logs(TAG)
+
     private var originalScreenTimeout: Long = 0L
 
     private var lastRequestedTimeout: Long = -1L
@@ -53,6 +55,7 @@ class WakeLockHelper(private val context: Context): WakeLockActions {
     }
 
     override fun tryAcquireWakeLock(timeout: Long, with: View?) {
+        log.i( "Wakelock req: $timeout, $strategy")
        if (!strategy.writeSettings || !acquireWakeLockByChangeSettings(if (timeout < 0L) INDEFINITE_TIMEOUT else timeout)) {
            if (!strategy.useView || with == null) {
                acquireWakeLockInternal(strategy.wakeLockType, timeout)
@@ -114,7 +117,7 @@ class WakeLockHelper(private val context: Context): WakeLockActions {
         try {
             windowManager.updateViewLayout(topLevelView, lp)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set view flags, is it attached?")
+            log.e( "Failed to set view flags, is it attached?")
             return false
         }
         return true
@@ -122,7 +125,6 @@ class WakeLockHelper(private val context: Context): WakeLockActions {
 
     @SuppressLint("WakelockTimeout")
     private fun acquireWakeLockInternal(type: Int = PowerManager.PARTIAL_WAKE_LOCK, timeout: Long = -1L) {
-        Log.i(TAG, "Wakelock req: $timeout")
         try {
             if (wakeLock == null) {
                 wakeLock = powerManager.newWakeLock(type, TAG)
@@ -146,6 +148,7 @@ class WakeLockHelper(private val context: Context): WakeLockActions {
     }
 
     private fun modifyScreenTimeout(value: Long): Boolean {
+        log.d("Modify timeout real call: to=$value, original=$originalScreenTimeout")
         if(Settings.System.canWrite(context)) {
             try {
                 Settings.System.putLong(context.contentResolver, Settings.System.SCREEN_OFF_TIMEOUT, value)
@@ -158,10 +161,16 @@ class WakeLockHelper(private val context: Context): WakeLockActions {
         return false
     }
 
+    private fun restoreScreenTimeout() {
+        originalScreenTimeout.takeIf { it > 100 * 1000L && it != INDEFINITE_TIMEOUT }?.let {
+            modifyScreenTimeout(it)
+        }
+    }
+
     override fun releaseWakeLock() {
-        Log.i(TAG, "Wakelock release")
+        log.i( "Wakelock release")
         removeWakeLockOnView()
-        modifyScreenTimeout(originalScreenTimeout)
+        restoreScreenTimeout()
         wakeLock?.release()
         wakeLock = null
     }

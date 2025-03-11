@@ -3,11 +3,9 @@ package com.example.fltctl.utils
 import android.accessibilityservice.AccessibilityService
 import android.app.AppOpsManager
 import android.content.Context
-import android.content.Intent
 import android.os.Binder
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
 import com.example.fltctl.AppBackgroundListener
 import com.example.fltctl.AppMonitor
 import com.example.fltctl.controls.service.FloatingControlAccessibilityService
@@ -48,7 +46,7 @@ fun hasEnabledAccessibilityService(context: Context, serviceClass: Class<out Acc
         }
         return false
     }catch (e: Exception) {
-        Log.e("PermissionsKt", "Check accessibility fail for ${e.message}")
+        MmapLogProxy.getInstance().log(MmapLogProxy.ERROR, "PermissionsKt", "Check accessibility fail for ${e.message}")
         return false
     }
 }

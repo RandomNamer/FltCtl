@@ -1,21 +1,24 @@
 package com.example.fltctl.appselection.ui
 
-import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.fltctl.AppMonitor
-import com.example.fltctl.configs.SettingKeys
 import com.example.fltctl.appselection.model.AppInfo
 import com.example.fltctl.appselection.model.AppInfoCache
 import com.example.fltctl.appselection.model.ConciseActivityInfo
 import com.example.fltctl.appselection.model.filter
+import com.example.fltctl.configs.SettingKeys
 import com.example.fltctl.configs.settings
 import com.example.fltctl.ui.toast
+import com.example.fltctl.utils.logs
 import com.example.fltctl.widgets.composable.DualStateListItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 data class PackageFilterCriterion(
@@ -77,6 +80,8 @@ class AppSelectPageVM: ViewModel() {
 
     private var _fastSearch: Boolean = false
 
+    private val log by logs(TAG)
+
     init {
         viewModelScope.launch {
             AppMonitor.appContext.settings.data.collect { pref ->
@@ -112,7 +117,7 @@ class AppSelectPageVM: ViewModel() {
                     activityDialog = dlgState
                 )
             }.catch {
-                Log.e(TAG, "upstream flow error: $it")
+                log.e("upstream flow error: $it")
             }.collect {
                 _uiState.value = it
             }

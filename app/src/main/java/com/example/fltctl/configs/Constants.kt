@@ -12,9 +12,14 @@ object PackageNames {
     const val SYSTEMUI = "com.android.systemui"
     const val SETTINGS = "com.android.settings"
     const val MIHON = "app.mihon"
+    const val MIHON_D = "app.mihon.debug"
     const val COPY = "com.copymanga.app"
     const val MR = "com.youniaogu.mangareader"
     const val KOTASU = "org.koitharu.kotatsu"
+    const val EH_1 = "moe.tarsin.ehviewer"
+    const val EH_2 = "org.moedog.ehviewer"
+    const val KINOKO = "com.ero.kinoko"
+    const val QS = "com.webcomic.xcartoom"
 }
 
 val verticalTurnPageWhitelist = listOf(PackageNames.TIKTOK_M, PackageNames.TIKTOK_T)

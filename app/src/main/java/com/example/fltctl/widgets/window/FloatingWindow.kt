@@ -8,7 +8,6 @@ import android.graphics.Point
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
-import android.util.Log
 import android.view.Display
 import android.view.Gravity
 import android.view.MotionEvent
@@ -21,6 +20,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.annotation.UiThread
 import androidx.core.math.MathUtils
+import com.example.fltctl.utils.logs
 import com.example.fltctl.widgets.view.navBarHeight
 import com.example.fltctl.widgets.view.screenHeight
 import com.example.fltctl.widgets.view.screenWidth
@@ -149,9 +149,11 @@ open class FloatingWindow(private val context: Context) {
     var isShowing = false
         private set
 
+    private val log by logs(TAG)
+
     fun show(with: View?, toPosition: Point? = null): Boolean {
         if (windowManager.defaultDisplay.state != Display.STATE_ON) {
-            Log.e(TAG, "Cannot show window when screen is off")
+            log.e( "Cannot show window when screen is off")
             return false
         }
         if (isShowing) return false
@@ -175,7 +177,7 @@ open class FloatingWindow(private val context: Context) {
             }, 100L)
         }
         isShowing = true
-        Log.d(TAG, "Window $this shown")
+        log.d( "Window $this shown")
         return true
     }
 
@@ -193,7 +195,7 @@ open class FloatingWindow(private val context: Context) {
         decorView = null
         isShowing = false
         ConfigurationHelper.removeAllOnChangeListeners()
-        Log.d(TAG, "Window $this hidden")
+        log.d( "Window $this hidden")
     }
 
     @UiThread
@@ -203,7 +205,7 @@ open class FloatingWindow(private val context: Context) {
             navBarHeight = context.navBarHeight
             statusBarHeight = context.statusBarHeight
         }
-        Log.i(TAG, "Screen config changed. Current size: ($screenHeight, $screenWidth) insetHeights: ($statusBarHeight, $navBarHeight) rotation: ${windowManager.defaultDisplay.rotation}, relativeY: $relativeWindowPositionY")
+        log.i( "Screen config changed. Current size: ($screenHeight, $screenWidth) insetHeights: ($statusBarHeight, $navBarHeight) rotation: ${windowManager.defaultDisplay.rotation}, relativeY: $relativeWindowPositionY")
         onCompleted?.invoke()
     }
 

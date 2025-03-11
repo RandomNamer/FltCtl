@@ -17,6 +17,9 @@ import com.example.fltctl.controls.arch.FloatingControl
 import com.example.fltctl.controls.arch.FloatingControlInfo
 import com.example.fltctl.ui.toast
 
+/**
+ * We dont like fragments. For complex UI, compose is sufficient for SAA.
+ */
 class ViewBasedTestsContainerActivity : AppCompatActivity() {
 
     companion object {

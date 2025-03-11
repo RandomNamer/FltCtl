@@ -17,6 +17,7 @@ import android.view.ViewOutlineProvider
 import android.widget.FrameLayout
 import androidx.annotation.CallSuper
 import androidx.annotation.ColorInt
+import com.example.fltctl.configs.EInkDeviceConfigs
 import kotlin.math.absoluteValue
 import kotlin.math.min
 
@@ -132,8 +133,8 @@ open class EInkCompatRoundedButton @JvmOverloads constructor(
     private fun createEInkModeBackground(): Drawable {
         return StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_pressed), colorDrawableWithRoundedCorner(Color.BLACK))
-            addState(intArrayOf(-android.R.attr.state_pressed), colorDrawableWithRoundedCorner(Color.WHITE.withAlpha(0.35f)))
-            addState(intArrayOf(), colorDrawableWithRoundedCorner(Color.WHITE.withAlpha(0.35f)))
+            addState(intArrayOf(-android.R.attr.state_pressed), colorDrawableWithRoundedCorner(EInkDeviceConfigs.backgroundColor))
+            addState(intArrayOf(), colorDrawableWithRoundedCorner(EInkDeviceConfigs.backgroundColor))
         }
     }
 

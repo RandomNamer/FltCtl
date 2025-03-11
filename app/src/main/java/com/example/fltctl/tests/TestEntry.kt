@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import com.example.fltctl.tests.compose.AlbumPreviewUiTest
 import com.example.fltctl.tests.controls.FloatingControlIntegrationTest
-import com.example.fltctl.ui.theme.LocalEInkMode
+import com.example.fltctl.tests.controls.LogViewer
 import com.example.fltctl.widgets.composable.DualStateListDialog
 import com.example.fltctl.widgets.composable.DualStateListItem
 
@@ -17,13 +17,12 @@ object TestEntry {
     private val registry = mutableSetOf<UiTest>(
         FloatingControlIntegrationTest(),
         AlbumPreviewUiTest(),
+        LogViewer(),
     )
 
     @Composable
     fun TestSelectionEntry(dismissHandle: () -> Unit) {
         val ctx = LocalContext.current
-        val eInkMode = LocalEInkMode.current
-
         DualStateListDialog<UiTest>(
             items = registry.map { DualStateListItem(true, it.title, it) },
             title = "Select a UI Test",

@@ -7,7 +7,7 @@ import com.example.fltctl.controls.service.ActionPerformer
  * @author zeyu.zyzhang@bytedance.com
  */
 class MangaAppTriggerWakeLock: AppTrigger {
-    override val triggerList: List<String>
+    override val triggerList: Set<String>
         get() = MangaAppTriggerPageTurn.mangaAppList
 
     override val tag: String = this::class.simpleName.toString()

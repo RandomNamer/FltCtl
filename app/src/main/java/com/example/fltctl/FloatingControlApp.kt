@@ -4,7 +4,10 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
+import com.example.fltctl.configs.SettingsCache
+import com.example.fltctl.utils.MmapLogProxy
 import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArraySet
 
@@ -12,6 +15,19 @@ class FloatingControlApp: Application() {
     override fun onCreate() {
         super.onCreate()
         AppMonitor.onAppCreate(this)
+        MmapLogProxy.initialize(this)
+        MmapLogProxy.getInstance().log(MmapLogProxy.INFO, "Application", "onCreate")
+        SettingsCache.init(this)
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        MmapLogProxy.getInstance().flush()
+    }
+
+    override fun onTerminate() {
+        super.onTerminate()
+        MmapLogProxy.getInstance().flush()
     }
 }
 

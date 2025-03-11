@@ -3,24 +3,26 @@ package com.example.fltctl.controls.service
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.content.Intent
-import android.graphics.Rect
-import android.util.Log
-import android.view.accessibility.AccessibilityEvent
-import android.view.accessibility.AccessibilityNodeInfo
 import android.graphics.Path
 import android.graphics.PointF
+import android.graphics.Rect
+import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import com.example.fltctl.configs.verticalTurnPageWhitelist
 import com.example.fltctl.controls.service.appaware.AppTriggerManager
+import com.example.fltctl.utils.logs
 
 class FloatingControlAccessibilityService: AccessibilityService(), RequireAccessibilityServiceActions {
     companion object {
         private const val TAG = "AccSvc"
     }
 
+    private val log by logs(TAG)
+
     private var cachedRootNode: AccessibilityNodeInfo? = null
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-//        Log.i(TAG, event.toString())
+//        log.i(event.toString())
         if (event != null) {
             AppTriggerManager.onAccessibilityEvent(event)
         }
@@ -28,18 +30,18 @@ class FloatingControlAccessibilityService: AccessibilityService(), RequireAccess
     }
 
     override fun onInterrupt() {
-        Log.i(TAG, "interrupted")
+        log.i("interrupted")
     }
 
     override fun onServiceConnected() {
-        Log.i(TAG, "onConnect")
+        log.i("onConnect")
         super.onServiceConnected()
         ActionPerformer.onServiceConnect(this)
 //        FloatingControlManager.tryShowWindowWithCurrentControl()
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
-        Log.i(TAG, "onUnbind")
+        log.i("onUnbind")
         ActionPerformer.onServiceDisconnect()
         return super.onUnbind(intent)
     }
@@ -74,7 +76,7 @@ class FloatingControlAccessibilityService: AccessibilityService(), RequireAccess
         val gb = GestureDescription.Builder().apply {
             addStroke(GestureDescription.StrokeDescription(clickPath, 0, 10))
         }
-        Log.i(TAG, "Try touch to turn page by $touchPoint")
+        log.i("Try touch to turn page by $touchPoint")
         dispatchGesture(gb.build(), null, null)
     }
 

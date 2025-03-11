@@ -3,18 +3,17 @@ package com.example.fltctl.appselection.model
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
-import android.content.pm.PackageManager.ApplicationInfoFlags
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
 import com.example.fltctl.AppMonitor
 import com.example.fltctl.appselection.ui.PackageFilterCriterion
+import com.example.fltctl.utils.logs
 
 const val TAG_APPINF = "AppInfInfra"
+val log by logs(TAG_APPINF)
 
 fun PackageFilterCriterion.filter(appInfo: AppInfo): Boolean {
     return appInfo.search(searchKeyword ?: "") &&
@@ -57,7 +56,7 @@ fun AppInfo.updateWith(new: AppInfo): AppInfo {
 }
 
 fun Context.openAppSettingsPage(packageName: String) {
-    Log.w(TAG_APPINF, "Incoming pkgName: $packageName")
+    log.w("Incoming pkgName: $packageName")
     startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
         setData(Uri.parse("package:$packageName"))
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -65,7 +64,7 @@ fun Context.openAppSettingsPage(packageName: String) {
 }
 
 fun Context.startActivityByName(pkgName: String, clsName: String) {
-    Log.w(TAG_APPINF, "starting Activity by: $pkgName, $clsName")
+    log.w("starting Activity by: $pkgName, $clsName")
     try {
         startActivity(Intent().apply {
             component = ComponentName(pkgName, clsName)

@@ -1,7 +1,6 @@
 package com.example.fltctl.ui.home
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,8 +8,15 @@ import com.example.fltctl.AppMonitor
 import com.example.fltctl.configs.SettingKeys
 import com.example.fltctl.configs.settings
 import com.example.fltctl.controls.arch.FloatingControlManager
+import com.example.fltctl.utils.logs
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 data class HomeUIState(
@@ -47,6 +53,8 @@ class HomeViewModel : ViewModel() {
 
     private var allPermissionsClear = false
 
+    private val log by logs(TAG)
+
     init {
         viewModelScope.launch (Dispatchers.IO) {
             val settingsFlow = AppMonitor.appContext.settings.data.map {
@@ -67,9 +75,9 @@ class HomeViewModel : ViewModel() {
                     eInkModeEnabled = stateFromSetting.eInkModeEnabled
                 )
             }.catch {
-                Log.e(TAG, "State error: $it")
+                log.e("State error: $it")
             }.distinctUntilChanged().collect {
-                Log.d(TAG, "State mutate: $it")
+                log.d("State mutate: $it")
                 _uiState.value = it
             }
         }

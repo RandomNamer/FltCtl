@@ -2,10 +2,10 @@ package com.example.fltctl.controls.service.appaware
 
 import android.os.Build
 import android.os.Build.VERSION_CODES
-import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.example.fltctl.configs.PackageNames
 import com.example.fltctl.controls.service.ActionPerformer
+import com.example.fltctl.utils.logs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -23,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArraySet
  */
 
 interface AppTrigger {
-    val triggerList: List<String>
+    val triggerList: Set<String>
     val tag: String
     fun onActive()
     fun onInactive()
@@ -81,6 +81,8 @@ object AppTriggerManager {
 
     private val excludedPackages = setOf(PackageNames.SYSTEMUI, PackageNames.SETTINGS)
 
+    private val log by logs(TAG)
+
     init {
         preloadedTriggers.forEach { registerTrigger(it) }
         workerScope.launch(Dispatchers.IO) {
@@ -98,12 +100,12 @@ object AppTriggerManager {
 
     fun onAccessibilityEvent(event: AccessibilityEvent) {
         val copy = event.localCopy()
-//        Log.d(TAG, "onAccessibilityEvent: $copy")
+//        log.d("onAccessibilityEvent: $copy")
         workerScope.launch { _eventChannel.send(copy) }
     }
 
     private fun onFocusedAppChanged(packageName: String) {
-        Log.i(TAG, "Focused app changed: $focusedApp -> $packageName")
+        log.i("Focused app changed: $focusedApp -> $packageName")
         if (excludedPackages.contains(packageName)) {
             focusedApp = packageName
             return
@@ -135,7 +137,7 @@ object AppTriggerManager {
             }
             if (!event.className.isNullOrEmpty() && focusedActivity != event.className) {
                 //activity change
-                Log.d(TAG, "Activity changed: $focusedActivity -> ${event.className}")
+                log.v("Activity changed: $focusedActivity -> ${event.className}")
                 activeTriggers.forEach { trigger ->
                     trigger.onActivityFocusChanged(focusedActivity, event.className)
                 }

@@ -5,15 +5,14 @@ import android.content.Context
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.PaintDrawable
+import android.os.SystemClock
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.ColorInt
-import androidx.annotation.Px
-import android.graphics.Color
-import android.os.SystemClock
 import androidx.annotation.FloatRange
+import androidx.annotation.Px
+import com.example.fltctl.configs.EInkDeviceConfigs
 import kotlin.math.roundToInt
 
 fun Number.takeDp(): Int = takeDpAsFloat().roundToInt()
@@ -102,10 +101,10 @@ fun createRoundedCornerColorDrawable(@ColorInt color: Int,cornerRadius: Float): 
     setCornerRadius(cornerRadius)
 }
 
-fun createRoundedCornerEInkDrawable(cornerRadius: Float, alpha: Float = 0.35f): Drawable = GradientDrawable().apply {
-    setColor(Color.WHITE.withAlpha(alpha))
+fun createRoundedCornerEInkDrawable(cornerRadius: Float): Drawable = GradientDrawable().apply {
+    setColor(EInkDeviceConfigs.backgroundColor)
     setCornerRadius(cornerRadius)
-    setStroke(2.takeDp(), Color.BLACK)
+    setStroke(2.takeDp(), EInkDeviceConfigs.foregroundColor)
 }
 
 fun View.setDebouncedOnClickListener(interval: Long = 500L, onClick: (View) -> Unit) {
