@@ -76,8 +76,8 @@ class HomeViewModel : ViewModel() {
                 )
             }.catch {
                 log.e("State error: $it")
-            }.distinctUntilChanged().collect {
-                log.d("State mutate: $it")
+            }.collect {
+                log.d("Upstream state update: $it")
                 _uiState.value = it
             }
         }
@@ -95,7 +95,7 @@ class HomeViewModel : ViewModel() {
 
     private fun onEnableStateChanged(enable: Boolean) {
         if (enable) {
-            if (_isWindowShowing) FloatingControlManager.tryShowWindowWithCurrentControl()
+            if (!_isWindowShowing) FloatingControlManager.tryShowWindowWithCurrentControl()
         } else {
             FloatingControlManager.closeWindow()
             //Which window show state (checkbox) should not change

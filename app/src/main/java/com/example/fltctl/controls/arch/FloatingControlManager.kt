@@ -149,6 +149,7 @@ object FloatingControlManager {
     @MainThread
     fun tryShowWindowWithCurrentControl(onResult: ((Boolean) -> Unit)? = null) {
         (window ?: FloatingWindow(AppMonitor.appContext).also { window = it }).run {
+            if (isShowing && currentControlInstance?.getView() == getCurrentContent()) return@run
             val result = show(getCurrentViewOutOfWindow(AppMonitor.appContext), Point(
                 recoverXPositionValue(lastWindowPositionX),
                 recoverYPositionValue(lastWindowPositionY)

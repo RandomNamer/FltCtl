@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
 import com.example.fltctl.configs.SettingsCache
+import com.example.fltctl.utils.LogProxy
 import com.example.fltctl.utils.MmapLogProxy
 import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArraySet
@@ -16,7 +17,7 @@ class FloatingControlApp: Application() {
         super.onCreate()
         AppMonitor.onAppCreate(this)
         MmapLogProxy.initialize(this)
-        MmapLogProxy.getInstance().log(MmapLogProxy.INFO, "Application", "onCreate")
+        MmapLogProxy.getInstance().log(LogProxy.INFO, "Application", "onCreate")
         SettingsCache.init(this)
     }
 

@@ -46,7 +46,7 @@ fun hasEnabledAccessibilityService(context: Context, serviceClass: Class<out Acc
         }
         return false
     }catch (e: Exception) {
-        MmapLogProxy.getInstance().log(MmapLogProxy.ERROR, "PermissionsKt", "Check accessibility fail for ${e.message}")
+        MmapLogProxy.getInstance().log(LogProxy.ERROR, "PermissionsKt", "Check accessibility fail for ${e.message}")
         return false
     }
 }

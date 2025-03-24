@@ -227,6 +227,10 @@ open class FloatingWindow(private val context: Context) {
         }
     }
 
+    fun getCurrentContent(): View? {
+        return decorView?.getChildAt(0)
+    }
+
     private fun setInitialParams(lp: WindowManager.LayoutParams) {
         lp.apply {
             type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

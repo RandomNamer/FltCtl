@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuItem
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
 import androidx.annotation.IntDef
@@ -13,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.util.fastForEachIndexed
 import com.example.fltctl.controls.arch.FloatingControl
 import com.example.fltctl.controls.arch.FloatingControlInfo
 import com.example.fltctl.ui.toast
@@ -23,6 +27,8 @@ import com.example.fltctl.ui.toast
 class ViewBasedTestsContainerActivity : AppCompatActivity() {
 
     companion object {
+        private const val PERSIST_WHEN_CONFIG_CHANGE = false
+
         private const val LAUNCH_MODE_NOTHING = 0
         private const val LAUNCH_MODE_FLTCTL = 1
         private const val LAUNCH_MODE_VIEW_CREATER = 2
@@ -37,12 +43,14 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
         private const val EXTRA_LAUNCH_MODE = "launch_mode"
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_DESC = "desc"
+        private const val EXTRA_LAYOUT_ID = "layout_id"
 
         private val transactionObjStore = mutableMapOf<String, Any>()
         private const val TRANSACTION_OBJ_FLTCTL = "TRANSACTION_OBJ_FLTCTL"
         private const val TRANSACTION_OBJ_COMPOSE = "TRANSACTION_OBJ_COMPOSE"
+        private const val TRANSACTION_OBJ_COMMON = "TRANSACTION_OBJ_ORIGINAL_OBJ"
 
-        fun <V> MutableMap<String, Any>.getAndRemove(key: String): V? = (get(key) as? V)?.also { remove(key) }
+        fun <V> MutableMap<String, Any>.getAndRemove(key: String): V? = (get(key) as? V)?.also { if (!PERSIST_WHEN_CONFIG_CHANGE) remove(key) }
 
         @JvmStatic
         fun launch(context: Context, floatingControl: FloatingControlInfo) {
@@ -58,6 +66,8 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
                 putExtra(EXTRA_TITLE, test.title)
                 putExtra(EXTRA_DESC, test.description)
             }
+            transactionObjStore.clear()
+            transactionObjStore.put(TRANSACTION_OBJ_COMMON, test)
 
             when(test) {
                 is UiTest.FltCtlUiTest -> {
@@ -73,6 +83,10 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
                     intent.putExtra(EXTRA_LAUNCH_MODE, LAUNCH_MODE_VIEW_CREATER)
                     //TODO: support it
                 }
+                is UiTest.XmlUiTest -> {
+                    intent.putExtra(EXTRA_LAUNCH_MODE, LAUNCH_MODE_VIEW_XML)
+                    intent.putExtra(EXTRA_LAYOUT_ID, test.layoutId)
+                }
             }
             context.startActivity(intent)
         }
@@ -84,7 +98,15 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
     private lateinit var rootContainer: FrameLayout
     private var floatingControlInstance: FloatingControl? = null
 
+    private val menuItems = mutableListOf<SimpleMenuItem>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        transactionObjStore.getAndRemove<UiTest>(TRANSACTION_OBJ_COMMON)?.run {
+            onActivityCreate(this@ViewBasedTestsContainerActivity)
+            menuItems.clear()
+            menuItems.addAll(produceMenuItems(this@ViewBasedTestsContainerActivity))
+        }
+
         super.onCreate(savedInstanceState)
         parseIntent()
         rootContainer = FrameLayout(this).apply {
@@ -92,6 +114,24 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
         }
         initView(rootContainer)
         setContentView(rootContainer)
+        transactionObjStore.clear()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuItems.fastForEachIndexed { idx, item ->
+            menu?.add(Menu.NONE, idx, Menu.NONE, item.title)?.apply {
+                setIcon(item.iconRes)
+                setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+            }
+        }
+        return menuItems.isNotEmpty() || super.onCreateOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        item.itemId.takeIf { it in menuItems.indices }?.let {
+            menuItems[it].callback(this)
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onStart() {
@@ -107,6 +147,7 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         floatingControlInstance?.destroy()
+        transactionObjStore.clear()
     }
 
     private fun parseIntent() {
@@ -139,10 +180,17 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
                         }
                     }
             }
-            LAUNCH_MODE_VIEW_CREATER, LAUNCH_MODE_VIEW_XML -> {
+            LAUNCH_MODE_VIEW_CREATER-> {
                 toast("To be supported")
             }
             LAUNCH_MODE_COMPOSE -> initCompose(container)
+            LAUNCH_MODE_VIEW_XML -> {
+                val id = intent.getIntExtra(EXTRA_LAYOUT_ID, 0)
+                if (id != 0) {
+                    val view = LayoutInflater.from(this).inflate(id, container, false)
+                    container.addView(view)
+                }
+            }
             LAUNCH_MODE_NOTHING -> toast("Illegal Launch")
         }
 
@@ -155,7 +203,10 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
             setContent {
                 Box {
                     composeUiTest?.run {
-                        Content()
+                        content.invoke(this@Box)
+                        if (fullscreen) {
+                            supportActionBar?.hide()
+                        }
                     } ?: run {
                         Box {
                             Text("No compatible compose test found", Modifier.align(Alignment.Center))

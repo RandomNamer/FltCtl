@@ -1,9 +1,14 @@
 package com.example.fltctl.tests
 
+import android.app.Activity
 import android.content.Context
 import android.view.View
+import androidx.annotation.DrawableRes
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
+import com.example.fltctl.AppMonitor
+import com.example.fltctl.R
 import com.example.fltctl.controls.arch.FloatingControl
 import com.example.fltctl.controls.arch.FloatingControlInfo
 
@@ -15,9 +20,17 @@ interface ControlInfoEncapsulated {
     val info: FloatingControlInfo
 }
 
+data class SimpleMenuItem(
+    @DrawableRes val iconRes: Int,
+    val title: String,
+    val callback: (context: Activity) -> Unit
+)
+
 sealed interface UiTest {
     val title: String
     val description: String
+    fun onActivityCreate(activity: AppCompatActivity) {}
+    fun produceMenuItems(context: Activity): List<SimpleMenuItem> = emptyList()
 
     abstract class FltCtlUiTest: FloatingControl(), ControlInfoEncapsulated, UiTest {
         override val title: String
@@ -26,13 +39,25 @@ sealed interface UiTest {
             get() = info.desc
     }
 
-    abstract class ComposeUiTest: UiTest {
-        @Composable
-        abstract fun BoxScope.Content()
+    data class ComposeUiTest(
+        override val title: String, override val description: String = "",
+        val content: @Composable BoxScope.() -> Unit,
+        val fullscreen: Boolean = false
+    ): UiTest {
+        override fun onActivityCreate(activity: AppCompatActivity) {
+            activity.setTheme(R.style.Theme_FltCtl)
+        }
     }
+
 
     abstract class ViewProviderUiTest: UiTest {
         abstract fun onCreateView(context: Context): View
     }
+
+    data class XmlUiTest(
+        val layoutId: Int,
+        override val title: String = AppMonitor.appContext.resources.getResourceEntryName(layoutId),
+        override val description: String = ""
+    ) : UiTest
 
 }

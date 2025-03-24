@@ -65,6 +65,7 @@ class MmapLogger private constructor(
 
         internal const val DEFAULT_BUFFER_SIZE = 1 * 1024 * 1024 // 1MB
         private const val MIN_REMAINING_SPACE = 10 * 1024 //10KB
+        private const val PADDING_END = 1024
 
         @SuppressLint("StaticFieldLeak")
         @Volatile
@@ -94,7 +95,7 @@ class MmapLogger private constructor(
 
         val dateStr = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
         val existingLogFiles = logDir.listFiles { file ->
-            file.name.startsWith("log-$dateStr-") && file.name.endsWith(".log")
+            file.name.startsWith("log-$dateStr-") && file.name.endsWith(".log") && !file.name.contains("trim")
         }?.sortedBy { it.name }
 
         if (!existingLogFiles.isNullOrEmpty()) {
@@ -131,7 +132,9 @@ class MmapLogger private constructor(
         return logFile
     }
 
-
+    /**
+     * No logs can be bigger than GB. Int is safe and provides a weak type constraint in pair/triple.
+     */
     private fun findEndPosition(file: File): Int {
         RandomAccessFile(file, "r").use { randomAccessFile ->
             val fileSize = minOf(randomAccessFile.length(), bufferSize.toLong()).toInt()
@@ -208,15 +211,46 @@ class MmapLogger private constructor(
         }
     }
 
+    internal fun trimLogs() {
+        listLogFiles().filter { (f, _) -> f.name != currentFile.name && !f.name.contains("trim") }
+            .forEach { (f, lastPos) ->
+                if (f.exists()) {
+                    if (lastPos < f.length() - MIN_REMAINING_SPACE) {
+                        //If file has significant unused space, trim it so contain only useful contents
+                        val bytes = ByteArray(lastPos + PADDING_END)
+                        f.readBytes().copyInto(bytes, 0, 0, lastPos)
+                        val newFile = File(f.parent, "${f.nameWithoutExtension}-trimmed.log")
+                        newFile.writeBytes(bytes)
+                        f.delete()
+                        LogProxy.getDefault().log(LogProxy.INFO, TAG, "Trim file ${f.name} to $lastPos bytes")
+                    }
+                }
+            }
+    }
+
     fun flush() {
         synchronized(currentBuffer) {
             currentBuffer.force()
         }
     }
 
-    fun getLogFiles(): List<File> {
-        val logDir = File(context.filesDir, "logs")
-        return logDir.listFiles()?.filter { it.name.startsWith("log-") }?.sortedBy { it.name } ?: emptyList()
+    fun listLogFiles(): List<Pair<File, Int>> {
+        val logDir = File(context.filesDir, "logs").apply {
+            if (!exists()) mkdirs()
+        }
+        return (logDir.listFiles()?.toList() ?: emptyList())
+            .filter { it.name.startsWith("log-") && it.extension == "log"}
+            .sortedBy { it.name }
+            .map { file ->
+                val lastPos = if (file.name == currentFile.name) {
+                    // For current file, use the last position from the log system
+                    position.get()
+                } else {
+                    // For other files, calculate actual content size
+                    findEndPosition(file)
+                }
+                Pair(file, lastPos)
+            }
     }
 
     // Get readable content directly from the current buffer
@@ -235,16 +269,7 @@ class MmapLogger private constructor(
     }
 }
 
-/**
- * Proxy that handles both Android logging and memory-mapped logging
- */
-class MmapLogProxy private constructor(
-    context: Context,
-    bufferSize: Int = DEFAULT_BUFFER_SIZE
-) {
-    // Pure logger for memory-mapped operations
-    private val mmapLogger = MmapLogger.initialize(context, bufferSize)
-
+interface LogProxy {
     companion object {
         // Make log levels available from the proxy
         const val VERBOSE = MmapLogger.VERBOSE
@@ -252,6 +277,37 @@ class MmapLogProxy private constructor(
         const val INFO = MmapLogger.INFO
         const val WARN = MmapLogger.WARN
         const val ERROR = MmapLogger.ERROR
+
+        fun getDefault(): LogProxy = MmapLogProxy.getInstance()
+
+        fun getAndroid() = AndroidOnlyLogProxy
+    }
+    fun log(level: Int, tag: String, message: String)
+}
+
+object AndroidOnlyLogProxy: LogProxy {
+    override fun log(level: Int, tag: String, message: String) {
+        when (level) {
+            LogProxy.VERBOSE -> AndroidLog.v(tag, message)
+            LogProxy.DEBUG -> AndroidLog.d(tag, message)
+            LogProxy.INFO -> AndroidLog.i(tag, message)
+            LogProxy.WARN -> AndroidLog.w(tag, message)
+            LogProxy.ERROR -> AndroidLog.e(tag, message)
+        }
+    }
+}
+
+/**
+ * Proxy that handles both Android logging and memory-mapped logging
+ */
+class MmapLogProxy private constructor(
+    context: Context,
+    bufferSize: Int = DEFAULT_BUFFER_SIZE
+): LogProxy {
+    // Pure logger for memory-mapped operations
+    private val mmapLogger = MmapLogger.initialize(context, bufferSize)
+
+    companion object {
 
         @Volatile
         private var INSTANCE: MmapLogProxy? = null
@@ -270,14 +326,14 @@ class MmapLogProxy private constructor(
         }
     }
 
-    fun log(level: Int, tag: String, message: String) {
+    override fun log(level: Int, tag: String, message: String) {
         // 1. Log to Android's logcat (on original thread)
         when (level) {
-            VERBOSE -> AndroidLog.v(tag, message)
-            DEBUG -> AndroidLog.d(tag, message)
-            INFO -> AndroidLog.i(tag, message)
-            WARN -> AndroidLog.w(tag, message)
-            ERROR -> AndroidLog.e(tag, message)
+            LogProxy.VERBOSE -> AndroidLog.v(tag, message)
+            LogProxy.DEBUG -> AndroidLog.d(tag, message)
+            LogProxy.INFO -> AndroidLog.i(tag, message)
+            LogProxy.WARN -> AndroidLog.w(tag, message)
+            LogProxy.ERROR -> AndroidLog.e(tag, message)
         }
 
         // 2. Log to memory-mapped file (will be processed in background)
@@ -285,7 +341,7 @@ class MmapLogProxy private constructor(
     }
 
     fun flush() {
-        this.log(DEBUG, MmapLogger.TAG, "flush requested")
+        this.log(LogProxy.DEBUG, MmapLogger.TAG, "flush requested")
         mmapLogger.flush()
     }
 
@@ -293,9 +349,9 @@ class MmapLogProxy private constructor(
         return mmapLogger.getCurrentLogs()
     }
 
-    fun getLogFiles(): List<File> {
-        return mmapLogger.getLogFiles()
-    }
+    fun listLogFiles() = mmapLogger.listLogFiles()
+
+    fun trim() = mmapLogger.trimLogs()
 
     // Get all logs from the current session
     fun exportLogsToFile(outputFile: File) {
@@ -304,7 +360,7 @@ class MmapLogProxy private constructor(
             writer.write(mmapLogger.getCurrentLogs())
 
             // Then append any historical log files
-            mmapLogger.getLogFiles().forEach { file ->
+            mmapLogger.listLogFiles().forEach { (file, _) ->
                 if (file != outputFile && file.exists()) {
                     writer.write(file.readText())
                 }
@@ -361,22 +417,35 @@ fun logs(tag: String): LogLazy {
  */
 class Logger(
     private val tag: String,
-    private val proxy: MmapLogProxy = MmapLogProxy.getInstance()
+    private val proxy: LogProxy = MmapLogProxy.getInstance()
 ) {
-    fun v(message: String) = proxy.log(MmapLogProxy.VERBOSE, tag, message)
-    fun d(message: String) = proxy.log(MmapLogProxy.DEBUG, tag, message)
-    fun i(message: String) = proxy.log(MmapLogProxy.INFO, tag, message)
-    fun w(message: String) = proxy.log(MmapLogProxy.WARN, tag, message)
-    fun e(message: String) = proxy.log(MmapLogProxy.ERROR, tag, message)
+    fun v(message: String) = proxy.log(LogProxy.VERBOSE, tag, message)
+    fun d(message: String) = proxy.log(LogProxy.DEBUG, tag, message)
+    fun i(message: String) = proxy.log(LogProxy.INFO, tag, message)
+    fun w(message: String) = proxy.log(LogProxy.WARN, tag, message)
+    fun e(message: String) = proxy.log(LogProxy.ERROR, tag, message)
 }
 
 fun String.logLevel(): Int {
     return when {
-        contains(" V/") -> MmapLogProxy.VERBOSE
-        contains(" D/") -> MmapLogProxy.DEBUG
-        contains(" I/") -> MmapLogProxy.INFO
-        contains(" W/") -> MmapLogProxy.WARN
-        contains(" E/") -> MmapLogProxy.ERROR
+        contains(" V/") -> LogProxy.VERBOSE
+        contains(" D/") -> LogProxy.DEBUG
+        contains(" I/") -> LogProxy.INFO
+        contains(" W/") -> LogProxy.WARN
+        contains(" E/") -> LogProxy.ERROR
         else -> -1
     }
+}
+
+val trackLogger = Logger("Tracker", LogProxy.getAndroid())
+
+fun track(name: String, payload: () -> Unit) {
+//    val callPlace = Exception().stackTrace.firstOrNull {
+//        !it.className.contains("LocalLogsKt") && !it.methodName.contains("track")
+//    }
+//    val callerStr = callPlace?.toString() ?: "Unknown"
+    val start = SystemClock.elapsedRealtime()
+    payload.invoke()
+    val time = SystemClock.elapsedRealtime() - start
+    trackLogger.d("$name: Duration $time ms.")
 }

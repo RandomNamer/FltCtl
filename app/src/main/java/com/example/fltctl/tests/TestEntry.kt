@@ -3,7 +3,7 @@ package com.example.fltctl.tests
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import com.example.fltctl.tests.compose.AlbumPreviewUiTest
+import com.example.fltctl.tests.compose.albumtest.albumPreviewUiTest
 import com.example.fltctl.tests.controls.FloatingControlIntegrationTest
 import com.example.fltctl.tests.controls.LogViewer
 import com.example.fltctl.widgets.composable.DualStateListDialog
@@ -16,7 +16,7 @@ import com.example.fltctl.widgets.composable.DualStateListItem
 object TestEntry {
     private val registry = mutableSetOf<UiTest>(
         FloatingControlIntegrationTest(),
-        AlbumPreviewUiTest(),
+        albumPreviewUiTest,
         LogViewer(),
     )
 

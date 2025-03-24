@@ -1,5 +1,6 @@
 package com.example.fltctl.tests.controls
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
@@ -8,12 +9,18 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.fltctl.R
 import com.example.fltctl.controls.arch.FloatingControlInfo
+import com.example.fltctl.tests.SimpleMenuItem
 import com.example.fltctl.tests.UiTest
+import com.example.fltctl.tests.ViewBasedTestsContainerActivity
+import com.example.fltctl.utils.LogProxy
 import com.example.fltctl.utils.MmapLogProxy
 import com.example.fltctl.utils.logLevel
 import com.example.fltctl.widgets.view.margin
@@ -23,16 +30,23 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import logTrimmer
 
 /**
  * Created by zeyu.zyzhang on 3/11/25
  * @author zeyu.zyzhang@bytedance.com
- * TOD
  */
 class LogViewer: UiTest.FltCtlUiTest() {
     companion object {
         private const val DEFAULT_MAX_LINES = 300
         private const val DEFAULT_REFRESH_INTERVAL = 2000L
+
+    }
+
+    override fun onActivityCreate(activity: AppCompatActivity) {
+        with(activity) {
+            setTheme(android.R.style.Theme_Material_Light_NoActionBar)
+        }
     }
 
     override fun onCreateView(context: Context): View {
@@ -52,6 +66,12 @@ class LogViewer: UiTest.FltCtlUiTest() {
             displayName = "Log Viewer",
             klass = LogViewer::class
         )
+
+    override fun produceMenuItems(context: Activity): List<SimpleMenuItem> = listOf(
+        SimpleMenuItem(R.drawable.baseline_playlist_remove_24, "Log trimmer", {
+            ViewBasedTestsContainerActivity.launch(it, logTrimmer)
+        })
+    )
 }
 
 
@@ -136,11 +156,11 @@ class SimpleLogAdapter (private val level: Int, private val onNewLine: () -> Uni
 
             // Simple color coding based on log level
             val color = when (logLine.first) {
-                MmapLogProxy.VERBOSE -> Color.LTGRAY
-                MmapLogProxy.DEBUG -> Color.GRAY
-                MmapLogProxy.INFO -> Color.BLACK
-                MmapLogProxy.WARN -> "#FFA500".toColorInt() // Orange
-                MmapLogProxy.ERROR -> Color.RED
+                LogProxy.VERBOSE -> Color.LTGRAY
+                LogProxy.DEBUG -> Color.GRAY
+                LogProxy.INFO -> Color.BLACK
+                LogProxy.WARN -> "#FFA500".toColorInt() // Orange
+                LogProxy.ERROR -> Color.RED
                 else -> Color.BLACK
             }
 
@@ -156,7 +176,7 @@ fun RecyclerView.setupAsSimpleLogViewer(
     lifecycleOwner: LifecycleOwner,
     maxLines: Int = 1000,
     refreshIntervalMs: Long = 1000,
-    level: Int = MmapLogProxy.DEBUG,
+    level: Int = LogProxy.DEBUG,
 ) {
     // Create and set adapter
     val adapter = SimpleLogAdapter(level) {
@@ -167,7 +187,7 @@ fun RecyclerView.setupAsSimpleLogViewer(
     this.adapter = adapter
 
     // Set layout manager (reverse layout for newest first)
-    this.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context).apply {
+    this.layoutManager = LinearLayoutManager(context).apply {
         reverseLayout = true
         stackFromEnd = true
     }
