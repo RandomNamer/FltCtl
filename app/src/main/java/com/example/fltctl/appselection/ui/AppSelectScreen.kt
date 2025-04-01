@@ -96,7 +96,7 @@ fun AppSelectScreen(vm: AppSelectPageVM, onSelectEnd: () -> Unit, onBackPressedD
                     )
                 }
             },
-            onDismiss = {
+            onDismissRequest = {
                 vm.onDismissActivityListDialog()
             }
         )
@@ -248,7 +248,7 @@ fun AppSelectScreen(vm: AppSelectPageVM, onSelectEnd: () -> Unit, onBackPressedD
                 modifier = Modifier.padding(start = 10.dp, end = 10.dp),
                 verticalArrangement = Arrangement.Top
             ) {
-                items(count = selectionList.size) { idx ->
+                items(count = selectionList.size, key = {selectionList[it].value.packageName}) { idx ->
                     val item = selectionList[idx]
                     if (idx == 0) Spacer(modifier = Modifier.height(10.dp))
                     AppItemCardWithSelection(

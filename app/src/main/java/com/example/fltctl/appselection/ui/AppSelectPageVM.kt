@@ -1,5 +1,6 @@
 package com.example.fltctl.appselection.ui
 
+import androidx.compose.runtime.Stable
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,6 +28,7 @@ data class PackageFilterCriterion(
     val includeNoExportedActivity: Boolean = false,
 )
 
+@Stable
 data class AppInfoWithSelection(
     val value: AppInfo,
     val selected: Boolean = false
@@ -41,6 +43,7 @@ data class ActivitySelectDialogUiState(
     val exportedCount: Int = 0
 )
 
+@Stable
 data class AppSelectUiState(
     val appList: List<AppInfoWithSelection> = listOf(),
     val filter: PackageFilterCriterion = PackageFilterCriterion(),

@@ -7,10 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,11 +32,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.toColor
 import kotlinx.coroutines.delay
 import kotlin.math.max
 import kotlin.random.Random
-
 
 
 @Composable
@@ -92,7 +87,7 @@ fun VerticalScrollbar(
         is LazyListState -> {
             val totalItems = scrollState.layoutInfo.totalItemsCount
             if (totalItems > 0) {
-                (scrollState.firstVisibleItemIndex.toFloat() + scrollState.firstVisibleItemScrollOffset / scrollState.layoutInfo.viewportEndOffset ) / totalItems
+                scrollState.firstVisibleItemIndex.toFloat() / (totalItems - scrollState.layoutInfo.visibleItemsInfo.size)
             } else 0f
         }
         else -> throw IllegalArgumentException("Unsupported scroll state type")
@@ -119,11 +114,11 @@ fun VerticalScrollbar(
 
             var proportion: Float = when(scrollState) {
                 is ScrollState -> size.height / (scrollState.maxValue.toFloat() + size.height)
-                is LazyListState -> size.height / scrollState.layoutInfo.visibleItemsInfo[scrollState.firstVisibleItemIndex].size * scrollState.layoutInfo.totalItemsCount.toFloat()
+                is LazyListState -> scrollState.layoutInfo.visibleItemsInfo.size / scrollState.layoutInfo.totalItemsCount.toFloat()
                 else -> 0f
             }
 
-            if (proportion > 0.9) {
+            if (proportion > 0.9f) {
                 isVisible = false
                 return@Canvas
             }

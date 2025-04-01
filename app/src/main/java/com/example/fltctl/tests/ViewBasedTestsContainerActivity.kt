@@ -7,6 +7,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
 import androidx.annotation.IntDef
@@ -49,6 +50,7 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
         private const val TRANSACTION_OBJ_FLTCTL = "TRANSACTION_OBJ_FLTCTL"
         private const val TRANSACTION_OBJ_COMPOSE = "TRANSACTION_OBJ_COMPOSE"
         private const val TRANSACTION_OBJ_COMMON = "TRANSACTION_OBJ_ORIGINAL_OBJ"
+        private const val TRANSACTION_OBJ_VIEW_CREATOR = "TRANSACTION_OBJ_VIEW_CREATOR"
 
         fun <V> MutableMap<String, Any>.getAndRemove(key: String): V? = (get(key) as? V)?.also { if (!PERSIST_WHEN_CONFIG_CHANGE) remove(key) }
 
@@ -81,7 +83,7 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
                 }
                 is UiTest.ViewProviderUiTest -> {
                     intent.putExtra(EXTRA_LAUNCH_MODE, LAUNCH_MODE_VIEW_CREATER)
-                    //TODO: support it
+                    transactionObjStore.put(TRANSACTION_OBJ_VIEW_CREATOR, test.viewProvider)
                 }
                 is UiTest.XmlUiTest -> {
                     intent.putExtra(EXTRA_LAUNCH_MODE, LAUNCH_MODE_VIEW_XML)
@@ -106,7 +108,6 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
             menuItems.clear()
             menuItems.addAll(produceMenuItems(this@ViewBasedTestsContainerActivity))
         }
-
         super.onCreate(savedInstanceState)
         parseIntent()
         rootContainer = FrameLayout(this).apply {
@@ -181,7 +182,9 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
                     }
             }
             LAUNCH_MODE_VIEW_CREATER-> {
-                toast("To be supported")
+                transactionObjStore.getAndRemove<(Context) -> View>(TRANSACTION_OBJ_VIEW_CREATOR)?.let {
+                    container.addView(it.invoke(this))
+                }
             }
             LAUNCH_MODE_COMPOSE -> initCompose(container)
             LAUNCH_MODE_VIEW_XML -> {

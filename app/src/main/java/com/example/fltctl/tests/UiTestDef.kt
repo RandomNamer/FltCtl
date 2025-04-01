@@ -50,9 +50,10 @@ sealed interface UiTest {
     }
 
 
-    abstract class ViewProviderUiTest: UiTest {
-        abstract fun onCreateView(context: Context): View
-    }
+    data class ViewProviderUiTest(
+        override val title: String, override val description: String = "",
+        val viewProvider: (Context) -> View,
+    ): UiTest
 
     data class XmlUiTest(
         val layoutId: Int,

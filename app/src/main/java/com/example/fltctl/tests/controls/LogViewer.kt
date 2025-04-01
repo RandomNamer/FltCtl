@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.annotation.ColorInt
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.LifecycleOwner
@@ -149,20 +150,25 @@ class SimpleLogAdapter (private val level: Int, private val onNewLine: () -> Uni
     }
 
     class LogViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        companion object {
+            @ColorInt fun Int.logLevelAsColor(): Int {
+                return when (this) {
+                    LogProxy.VERBOSE -> Color.LTGRAY
+                    LogProxy.DEBUG -> Color.GRAY
+                    LogProxy.INFO -> Color.BLACK
+                    LogProxy.WARN -> "#FFA500".toColorInt() // Orange
+                    LogProxy.ERROR -> Color.RED
+                    else -> Color.BLACK
+                }
+            }
+        }
         private val textView: TextView = itemView.findViewById(android.R.id.text1)
 
         fun bind(logLine: Pair<Int, String>) {
             textView.text = logLine.second
 
             // Simple color coding based on log level
-            val color = when (logLine.first) {
-                LogProxy.VERBOSE -> Color.LTGRAY
-                LogProxy.DEBUG -> Color.GRAY
-                LogProxy.INFO -> Color.BLACK
-                LogProxy.WARN -> "#FFA500".toColorInt() // Orange
-                LogProxy.ERROR -> Color.RED
-                else -> Color.BLACK
-            }
+            val color = logLine.first.logLevelAsColor()
 
             textView.setTextColor(color)
         }

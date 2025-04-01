@@ -25,6 +25,8 @@ interface ImageSource {
     // Provides a thumbnail bitmap
     suspend fun provideThumbnail(): Bitmap
 
+    suspend fun provideImage(): Bitmap
+
     // Image dimensions
     val width: Int
     val height: Int
@@ -133,26 +135,31 @@ class ColorImageSource private constructor(
     }
 
     override suspend fun provideThumbnail(): Bitmap {
-        return withContext(Dispatchers.Default) {
-            // Calculate thumbnail dimensions while preserving aspect ratio
-            val maxThumbnailDimension = 150
-            val thumbnailWidth: Int
-            val thumbnailHeight: Int
+        // Calculate thumbnail dimensions while preserving aspect ratio
+        val maxThumbnailDimension = 150
+        val thumbnailWidth: Int
+        val thumbnailHeight: Int
 
-            if (width >= height) {
-                // Landscape or square orientation
-                thumbnailWidth = min(maxThumbnailDimension, width)
-                thumbnailHeight = (height.toFloat() * thumbnailWidth / width).toInt()
-            } else {
-                // Portrait orientation
-                thumbnailHeight = min(maxThumbnailDimension, height)
-                thumbnailWidth = (width.toFloat() * thumbnailHeight / height).toInt()
+        if (width >= height) {
+            // Landscape or square orientation
+            thumbnailWidth = min(maxThumbnailDimension, width)
+            thumbnailHeight = (height.toFloat() * thumbnailWidth / width).toInt()
+        } else {
+            // Portrait orientation
+            thumbnailHeight = min(maxThumbnailDimension, height)
+            thumbnailWidth = (width.toFloat() * thumbnailHeight / height).toInt()
+        }
+
+        return createBitmap(thumbnailWidth, thumbnailHeight).apply {
+            eraseColor(color)
+        }
+    }
+
+    override suspend fun provideImage(): Bitmap {
+        return withContext(Dispatchers.IO) {
+            createBitmap(width, height).apply {
+                eraseColor(color)
             }
-
-            // Create bitmap with the calculated dimensions
-            val bitmap = createBitmap(thumbnailWidth, thumbnailHeight)
-            bitmap.eraseColor(color)
-            bitmap
         }
     }
 }
@@ -297,23 +304,27 @@ class BlurHashImageSource private constructor(
     }
 
     override suspend fun provideThumbnail(): Bitmap {
+        // Calculate thumbnail dimensions while preserving aspect ratio
+        val maxThumbnailDimension = 150
+        val thumbnailWidth: Int
+        val thumbnailHeight: Int
+
+        if (width >= height) {
+            thumbnailWidth = min(maxThumbnailDimension, width)
+            thumbnailHeight = (height.toFloat() * thumbnailWidth / width).toInt()
+        } else {
+            thumbnailHeight = min(maxThumbnailDimension, height)
+            thumbnailWidth = (width.toFloat() * thumbnailHeight / height).toInt()
+        }
+
+        // Generate a BlurHash-based thumbnail
+        // In a real implementation, you would use a proper BlurHash library
+        return decodeBlurHash(blurHash, thumbnailWidth, thumbnailHeight)
+    }
+
+    override suspend fun provideImage(): Bitmap {
         return withContext(Dispatchers.Default) {
-            // Calculate thumbnail dimensions while preserving aspect ratio
-            val maxThumbnailDimension = 150
-            val thumbnailWidth: Int
-            val thumbnailHeight: Int
-
-            if (width >= height) {
-                thumbnailWidth = min(maxThumbnailDimension, width)
-                thumbnailHeight = (height.toFloat() * thumbnailWidth / width).toInt()
-            } else {
-                thumbnailHeight = min(maxThumbnailDimension, height)
-                thumbnailWidth = (width.toFloat() * thumbnailHeight / height).toInt()
-            }
-
-            // Generate a BlurHash-based thumbnail
-            // In a real implementation, you would use a proper BlurHash library
-            decodeBlurHash(blurHash, thumbnailWidth, thumbnailHeight)
+            decodeBlurHash(blurHash, width, height)
         }
     }
 }
@@ -325,11 +336,14 @@ abstract class ImageRepository {
     companion object {
         const val DEFAULT_LOAD_SIZE = 30
 
+        const val DEFAULT_TEST_REPO_SIZE = 1000
+
         fun create(type: Type): ImageRepository = when (type) {
             Type.COLOR -> ColorTileImageRepo()
             Type.BLURHASH -> BlurHashImageRepo()
             else -> object: ImageRepository() {
-                override fun load(cursor: Int, count: Int)= emptyList<ImageSource>()
+                override suspend fun load(cursor: Int, count: Int)= emptyList<ImageSource>()
+                override suspend fun count(): Int = 0
             }
         }
     }
@@ -340,34 +354,30 @@ abstract class ImageRepository {
         SYSTEM_ALBUM
     }
 
-    open fun refresh() = load(0)
+    open suspend fun refresh() = load(0)
 
-    abstract fun load(cursor: Int, count: Int = DEFAULT_LOAD_SIZE): List<ImageSource>
+    abstract suspend fun load(cursor: Int, count: Int = DEFAULT_LOAD_SIZE): List<ImageSource>
+
+    abstract suspend fun count(): Int
 }
 
-class ColorTileImageRepo: ImageRepository() {
-    override fun load(cursor: Int, count: Int): List<ImageSource> = ColorImageSource.createSources(count)
+class ColorTileImageRepo(private val count: Int = DEFAULT_TEST_REPO_SIZE): ImageRepository() {
+    override suspend fun load(cursor: Int, count: Int): List<ImageSource> = ColorImageSource.createSources(count)
+
+    override suspend fun count(): Int = count
 }
 
-class BlurHashImageRepo : ImageRepository() {
+class BlurHashImageRepo(private val count: Int = DEFAULT_TEST_REPO_SIZE) : ImageRepository() {
     companion object {
         private val _all = mutableListOf<BlurHashImageSource>()
     }
 
-    override fun load(cursor: Int, count: Int): List<ImageSource> {
+    override suspend fun load(cursor: Int, count: Int): List<ImageSource> {
         val generationsNeeded = cursor + count - _all.count()
         if (generationsNeeded > 0) BlurHashImageSource.createSources(generationsNeeded).also { _all.addAll(it) }
-        return _all.slice(cursor..cursor + count)
+        return _all.slice(cursor..cursor + count-1)
     }
 
+    override suspend fun count(): Int = count
+
 }
-
-// ======= VIEW MODEL LAYER =======
-
-// State holder for the image album
-data class ImageAlbumState(
-    val images: List<ImageSource> = emptyList(),
-    val selectedImageId: String? = null,
-    val isPreviewVisible: Boolean = false,
-    val sourceType: ImageRepository.Type = ImageRepository.Type.COLOR
-)

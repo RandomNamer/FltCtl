@@ -19,20 +19,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.fltctl.configs.SettingKeys
 import com.example.fltctl.configs.SettingsCache
 import com.example.fltctl.tests.UiTest
+import com.example.fltctl.tests.controls.SimpleLogAdapter.LogViewHolder.Companion.logLevelAsColor
 import com.example.fltctl.ui.theme.FltCtlTheme
 import com.example.fltctl.ui.theme.LocalEInkMode
 import com.example.fltctl.utils.MmapLogProxy
+import com.example.fltctl.utils.logLevel
 import com.example.fltctl.utils.track
+import com.example.fltctl.widgets.composable.DualStateListDialog
+import com.example.fltctl.widgets.composable.DualStateListItem
 import com.example.fltctl.widgets.composable.EInkCompatCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -76,7 +83,7 @@ fun LogTrimmerScreen() {
                         realSize = lp,
                         isCurrent = false
                     )
-                }
+                }.asReversed()
             }
         }
         isLoading = false
@@ -150,14 +157,27 @@ fun LogTrimmerScreen() {
 private fun LogFileItem(
     fileInfo: LogFileInfo,
 ) {
+    var showLogContent by remember { mutableStateOf(false) }
+    
+    if (showLogContent) {
+        LogContentDialog(
+            fileInfo = fileInfo,
+            onDismiss = {
+                showLogContent = false
+            }
+        )
+    }
+    
     EInkCompatCard (
         isInEInkMode = LocalEInkMode.current,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                showLogContent = true
+            },
         tonalElevation = 4.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp).clickable {
-
-        }) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -185,6 +205,56 @@ private fun LogFileItem(
 
             }
         }
+    }
+}
+
+@Composable
+fun LogContentDialog(fileInfo: LogFileInfo, onDismiss: () -> Unit) {
+    val contentState = produceState<List<DualStateListItem<Int>>>(listOf(DualStateListItem(true, "Loading", null))) {
+       launch(Dispatchers.IO) {
+           track("LoadLogFileContent-${fileInfo.fileName}") {
+               val logString = MmapLogProxy.getInstance().getLogsOfFile(fileInfo.fileName)
+               value = logString.lines().map { DualStateListItem(true, it, it.logLevel().logLevelAsColor()) }
+           }
+       }
+    }
+
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    FltCtlTheme(darkTheme = false) {
+        DualStateListDialog(
+            items = contentState.value,
+            title = "Log Content",
+            onItemSelected = {},
+            customItemContent = {
+                Text(
+                    text = it.text,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(it.payload ?: android.graphics.Color.BLACK),
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            },
+            eInkMode = LocalEInkMode.current,
+//            mainAction = "Export" to {
+//                scope.launch(Dispatchers.IO) {
+//                    val text = MmapLogProxy.getInstance().getLogsOfFile(fileInfo.fileName)
+//                    withContext(Dispatchers.Main) {
+//                        val shareIntent = Intent().apply {
+//                            action = Intent.ACTION_SEND
+//                            putExtra(Intent.EXTRA_TEXT, text)
+//                            type = "text/plain"
+//
+//                        }
+//                        ctx.startActivity(Intent.createChooser(shareIntent, fileInfo.fileName))
+//                    }
+//
+//                }
+//
+//            },
+            onDismissRequest = onDismiss,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

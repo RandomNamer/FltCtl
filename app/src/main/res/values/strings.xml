@@ -35,4 +35,6 @@
     <string name="app_selection_activity_counts">%1$d of total %2$d are exported activities. </string>
     <string name="controlDisplayName_wake_lock">WakeLock</string>
     <string name="cancel">Cancel</string>
+    <string name="reply_title">reply to %s\'s comment</string>
+    <string name="title_activity_test_entry">Tests Entry</string>
 </resources>

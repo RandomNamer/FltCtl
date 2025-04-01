@@ -1,6 +1,7 @@
 package com.example.fltctl.ui.home
 
 import android.content.Context
+import androidx.compose.runtime.Stable
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
+@Stable
 data class HomeUIState(
     val enabled: Boolean = false,
     val isShowing: Boolean = false,

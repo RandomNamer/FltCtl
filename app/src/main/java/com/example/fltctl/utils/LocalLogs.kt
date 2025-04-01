@@ -267,6 +267,19 @@ class MmapLogger private constructor(
             return String(bytes)
         }
     }
+
+    fun getLogsOfFile(filename: String): String {
+        if (filename == currentFile.name) {
+            return "This log file is in use"
+        } else {
+            val logFile = File(context.filesDir, "logs/$filename")
+            if (!logFile.exists()) {
+                return "File not found"
+            }
+            val bytes = logFile.readBytes()
+            return String(bytes)
+        }
+    }
 }
 
 interface LogProxy {
@@ -352,6 +365,8 @@ class MmapLogProxy private constructor(
     fun listLogFiles() = mmapLogger.listLogFiles()
 
     fun trim() = mmapLogger.trimLogs()
+
+    fun getLogsOfFile(filename: String): String = mmapLogger.getLogsOfFile(filename)
 
     // Get all logs from the current session
     fun exportLogsToFile(outputFile: File) {

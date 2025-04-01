@@ -4,11 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ContentAlpha
@@ -19,6 +23,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,7 +48,7 @@ import com.example.fltctl.ui.theme.isInEInkMode
  * // meaning we'll never get a system UI controlled predictive back animation
  * // for these dialogs
  */
-
+@Stable
 data class DualStateListItem<T:Any> (
     val enabled: Boolean,
     val text: String,
@@ -56,15 +61,20 @@ data class DualStateListItem<T:Any> (
 
 fun List<Pair<Boolean, String>>.asDualStateList() = DualStateListItem.transformList(this)
 
+private const val LIST_USE_LAZY_THRESH = 100
+private const val LIST_USE_FULL_HEIGHT_THRESH = 20
+
 @Composable
 fun <T: Any> DualStateListDialog(
     items: List<DualStateListItem<T>>,
     title: String,
+    onDismissRequest: () -> Unit,
     onItemSelected: (T?) -> Unit,
     mainAction: Pair<String, () -> Unit>? = null,
     footer: @Composable () -> Unit = {},
-    onDismiss: () -> Unit = {},
-    eInkMode: Boolean = isInEInkMode
+    customItemContent: (@Composable BoxScope.(DualStateListItem<T>) -> Unit)? = null,
+    eInkMode: Boolean = isInEInkMode,
+    modifier: Modifier = Modifier
 ) {
 //    var dlgScale by remember { mutableFloatStateOf(1f) }
 //    PredictiveBackHandler(true) {
@@ -79,39 +89,61 @@ fun <T: Any> DualStateListDialog(
 //        }
 //    }
 //    val modifier = Modifier.scale(dlgScale)
-    val modifier = Modifier
+
+    @Composable
+    fun ListItemImpl(idx: Int, item: DualStateListItem<T>) {
+        val baseModifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = item.enabled) { onItemSelected(item.payload) }
+        Box(modifier = if (eInkMode && idx > 0) baseModifier.borderTop(1.dp, Color.DarkGray, 16.dp) else baseModifier) {
+            customItemContent?.let { it(item) } ?: Text(
+                text = item.text,
+                modifier = Modifier.align(Alignment.CenterStart).padding(16.dp),
+                fontSize = 18.sp,
+                color = if (item.enabled) MaterialTheme.colorScheme.onSurface else
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = ContentAlpha.disabled)
+            )
+        }
+    }
+
     AlertDialog(
         modifier = if (eInkMode) modifier.border(width = 2.dp, color = Color.Black, shape = AlertDialogDefaults.shape) else modifier,
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismissRequest,
         title = {
             Text(text = title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
         },
         text = {
             Column (Modifier.fillMaxWidth()) {
-                Box(Modifier.height(300.dp)) {
-                    val scrollState = rememberScrollState(0)
-                    Column(modifier = Modifier.verticalScroll(scrollState)) {
-                        items.forEachIndexed { idx, item ->
-                            val baseModifier = Modifier.fillMaxWidth()
-                                .clickable(enabled = item.enabled) { onItemSelected(item.payload) }
-                            Box(modifier = if (eInkMode && idx > 0) baseModifier.borderTop(1.dp, Color.DarkGray, 16.dp) else baseModifier) {
-                                Text(
-                                    text = item.text,
-                                    modifier = Modifier.align(Alignment.CenterStart).padding(16.dp),
-                                    fontSize = 18.sp,
-                                    color = if (item.enabled) MaterialTheme.colorScheme.onSurface else
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = ContentAlpha.disabled)
-                                )
-                            }
+                Box(if (items.size > LIST_USE_FULL_HEIGHT_THRESH) Modifier else Modifier.height(300.dp)) {
 
+                    if (items.size > LIST_USE_LAZY_THRESH) {
+                        val lazyListState = rememberLazyListState()
+                        LazyColumn(state = lazyListState) {
+                            itemsIndexed(items, key = { idx, item -> idx + item.hashCode() }) { idx, item ->
+                                ListItemImpl(idx, item)
+                            }
                         }
+                        VerticalScrollbar(
+                            scrollState = lazyListState,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(vertical = 10.dp, horizontal = 5.dp)
+                        )
+                    } else {
+                        val scrollState = rememberScrollState(0)
+                        Column(Modifier.verticalScroll(scrollState)) {
+                            items.forEachIndexed { p1, p2 ->
+                                ListItemImpl(p1, p2)
+                            }
+                        }
+                        VerticalScrollbar(
+                            scrollState = scrollState,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(vertical = 10.dp, horizontal = 5.dp)
+                        )
                     }
-                    VerticalScrollbar(
-                        scrollState = scrollState,
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(vertical = 10.dp, horizontal = 5.dp)
-                    )
+
                 }
                 Spacer(Modifier.height(10.dp))
                 Spacer(
@@ -136,14 +168,15 @@ fun <T: Any> DualStateListDialog(
             }
         },
         dismissButton = {
-            if (eInkMode) OutlinedButton(onClick = onDismiss) {
+            if (eInkMode) OutlinedButton(onClick = onDismissRequest) {
                 Text(stringResource(R.string.cancel))
-            } else TextButton(onClick = onDismiss) {
+            } else TextButton(onClick = onDismissRequest) {
                 Text(stringResource(R.string.cancel))
             }
         },
     )
 }
+
 
 
 
@@ -173,6 +206,7 @@ fun SimpleSelectorDialogPreview() {
         },
         onItemSelected = {
             println(it)
-        }
+        },
+        onDismissRequest = {}
     )
 }
