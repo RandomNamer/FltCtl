@@ -3,6 +3,7 @@ package com.example.fltctl.widgets.composable
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -15,27 +16,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import kotlin.math.roundToInt
 
-fun Modifier.borderBottom(width: Dp, color: Color, padding: Dp = 0.dp): Modifier = drawWithContent {
-    val widthPx = width.toPx()
-    drawContent()
-    drawLine(
-        color = color,
-        start = Offset(padding.toPx(), size.height - widthPx),
-        end = Offset(size.width - padding.toPx(), size.height - widthPx),
-        strokeWidth = widthPx,
-        cap = StrokeCap.Square
-    )
-}
+fun Modifier.borderBottom(width: Dp, color: Color, padding: Dp = 0.dp, paddingStart: Dp = padding, paddingEnd: Dp = padding): Modifier = borderLine(false, width, color, padding, paddingStart, paddingEnd)
 
-fun Modifier.borderTop(width: Dp, color: Color, padding: Dp = 0.dp): Modifier = drawWithContent {
+fun Modifier.borderTop(width: Dp, color: Color, padding: Dp = 0.dp, paddingStart: Dp = 0.dp, paddingEnd: Dp = 0.dp): Modifier = borderLine(true, width, color, padding, paddingStart,paddingEnd)
+
+fun Modifier.borderLine(top: Boolean, width: Dp, color: Color, padding: Dp = 0.dp, paddingStart: Dp = 0.dp, paddingEnd: Dp = 0.dp): Modifier = drawWithContent {
     val widthPx = width.toPx()
+    val psPx = max(padding, paddingStart).toPx()
+    val pePx = max(padding, paddingEnd).toPx()
+    val yPx = if (top) 0f else size.height - widthPx
     drawContent()
     drawLine(
         color = color,
-        start = Offset(padding.toPx(), 0f),
-        end = Offset(size.width - padding.toPx(), 0f),
+        start = Offset(psPx, yPx),
+        end = Offset(size.width - pePx, yPx),
         strokeWidth = widthPx,
         cap = StrokeCap.Square
     )

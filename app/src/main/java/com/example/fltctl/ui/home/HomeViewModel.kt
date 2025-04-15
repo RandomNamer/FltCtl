@@ -78,7 +78,7 @@ class HomeViewModel : ViewModel() {
                 )
             }.catch {
                 log.e("State error: $it")
-            }.collect {
+            }.distinctUntilChanged().collect {
                 log.d("Upstream state update: $it")
                 _uiState.value = it
             }

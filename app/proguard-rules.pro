@@ -11,6 +11,8 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+-keep class com.example.fltctl.controls.arch.FloatingControl
+-keep class * extends com.example.fltctl.controls.arch.FloatingControl { *; }
 
 # Uncomment this to preserve the line number information for
 # debugging stack traces.

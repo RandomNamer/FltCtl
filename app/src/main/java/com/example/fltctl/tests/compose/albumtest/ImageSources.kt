@@ -83,11 +83,11 @@ class ColorImageSource private constructor(
         )
 
         // Resolution ranges for different image orientations
-        private val portraitWidthRange = 1500..2500
-        private val portraitHeightRange = 3000..4500
+        private val portraitWidthRange = 750..1250
+        private val portraitHeightRange = 1500..2250
 
-        private val landscapeWidthRange = 3000..4500
-        private val landscapeHeightRange = 1500..2500
+        private val landscapeWidthRange = 1500..2250
+        private val landscapeHeightRange = 750..1250
 
         private val squareRange = 2000..4000
 
@@ -157,7 +157,7 @@ class ColorImageSource private constructor(
 
     override suspend fun provideImage(): Bitmap {
         return withContext(Dispatchers.IO) {
-            createBitmap(width, height).apply {
+            createBitmap(width, height, Bitmap.Config.RGB_565).apply {
                 eraseColor(color)
             }
         }
@@ -215,11 +215,11 @@ class BlurHashImageSource private constructor(
         }
 
         // Resolution ranges for different image orientations
-        private val portraitWidthRange = 1500..2500
-        private val portraitHeightRange = 3000..4500
+        private val portraitWidthRange = 750..1250
+        private val portraitHeightRange = 1500..2250
 
-        private val landscapeWidthRange = 3000..4500
-        private val landscapeHeightRange = 1500..2500
+        private val landscapeWidthRange = 1500..2250
+        private val landscapeHeightRange = 750..1250
 
         private val squareRange = 2000..4000
 

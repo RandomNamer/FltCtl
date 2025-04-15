@@ -29,6 +29,7 @@ data class SimpleMenuItem(
 sealed interface UiTest {
     val title: String
     val description: String
+    fun onEntryShow() {}
     fun onActivityCreate(activity: AppCompatActivity) {}
     fun produceMenuItems(context: Activity): List<SimpleMenuItem> = emptyList()
 

@@ -2,12 +2,14 @@ package com.example.fltctl.controls.service
 
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
+import androidx.annotation.Keep
 import androidx.core.os.bundleOf
 import com.example.fltctl.configs.PackageNames
 import com.example.fltctl.widgets.view.takeDpAsFloat
 
 private const val TAG = "TurnPageConfig"
 val CLICK_PADDING = 50.takeDpAsFloat()
+private const val FORCE_USE_DEFAULT_METHOD = true
 
 sealed interface TurnPageMethod {
     fun turnNext(node: AccessibilityNodeInfo): Boolean
@@ -15,6 +17,7 @@ sealed interface TurnPageMethod {
     fun match(node: AccessibilityNodeInfo): Boolean
 }
 
+@Keep
 object ViewPagerMethod : TurnPageMethod {
     private val nextAction = AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD
     private val prevAction = AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD
@@ -31,7 +34,7 @@ object ViewPagerMethod : TurnPageMethod {
     }
 
 }
-
+@Keep
 object MoveTextMethod: TurnPageMethod {
     private val nextAction = AccessibilityNodeInfo.AccessibilityAction.ACTION_NEXT_AT_MOVEMENT_GRANULARITY
     private val prevAction = AccessibilityNodeInfo.AccessibilityAction.ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY
@@ -73,6 +76,7 @@ fun findPageBy(root: AccessibilityNodeInfo?): TurnPageResult? {
 }
 
 private fun getMethodPriority(packageName: String): List<TurnPageMethod> {
+    if (FORCE_USE_DEFAULT_METHOD) return emptyList()
     return when(packageName) {
         PackageNames.KINDLE -> listOf(ViewPagerMethod)
         PackageNames.DMZJ, PackageNames.DMZJ_ALT -> listOf()

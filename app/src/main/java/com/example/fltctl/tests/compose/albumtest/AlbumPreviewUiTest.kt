@@ -1,7 +1,11 @@
 package com.example.fltctl.tests.compose.albumtest
 
 import android.graphics.Bitmap
+import android.view.View
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -9,7 +13,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculateCentroidSize
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -33,9 +43,10 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Surface
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -46,7 +57,9 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,22 +68,36 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastAny
+import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastSumBy
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.fltctl.AppMonitor
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.ui.theme.FltCtlTheme
+import com.example.fltctl.utils.androidLogs
+import com.example.fltctl.widgets.view.takeDp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.absoluteValue
 
 /**
  * Created by zeyu.zyzhang on 3/10/25
@@ -81,12 +108,16 @@ val albumPreviewUiTest = UiTest.ComposeUiTest(
     title = "Album Preview Gestures",
     content = {
         FltCtlTheme {
-            androidx.compose.material.Surface {
+            Surface {
                 Album()
             }
         }
     }
-)
+).also {
+    AppMonitor.addStartupTestPage(it)
+}
+
+private val log by androidLogs("AlbumTest")
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -97,6 +128,12 @@ fun BoxScope.Album() {
     val pagerState = rememberPagerState { state.tabs.size } // Dynamic tab count based on tabs list
     var showImagePreview by remember { mutableStateOf(false) }
     var selectedPreviewImageIndex by remember { mutableStateOf(0) }
+
+//    val view = LocalView.current
+//
+//    LaunchedEffect(Unit) {
+//        view.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+//    }
     
     // Sync tab selection with pager
     LaunchedEffect(pagerState.currentPage) {
@@ -290,7 +327,7 @@ fun ImageItem(image: ImageSource, onClick: () -> Unit, isSelected: Boolean) {
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Check,
+                    imageVector = Icons.Default.Check,
                     contentDescription = "Selected",
                     tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(16.dp)
@@ -351,14 +388,14 @@ fun SelectedImageThumbnail(image: ImageSource, onRemove: () -> Unit, onClick: ()
 enum class GestureState {
     IDLE,
     SCALING,
-    SWIPING_TO_DISMISS,
-    PAGING
+    DRAGGING,
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MultiImagePreview(images: List<ImageSource>, initialPage: Int, onDismiss: () -> Unit) {
     val pagerState = rememberPagerState(initialPage = initialPage) { images.size }
+    val currentImageInfo = remember { derivedStateOf { images[pagerState.currentPage] } }
     var gestureState by remember { mutableStateOf(GestureState.IDLE) }
     var dismissProgress by remember { mutableFloatStateOf(0f) }
     var isDismissing by remember { mutableStateOf(false) }
@@ -380,49 +417,60 @@ fun MultiImagePreview(images: List<ImageSource>, initialPage: Int, onDismiss: ()
     LaunchedEffect(isDismissing) {
         if (isDismissing) {
             // Wait for animation to complete before calling onDismiss
-            kotlinx.coroutines.delay(300)
+            delay(300)
             onDismiss()
         }
     }
+    // UI
+    Box(Modifier
+        .fillMaxSize()
+        .background(Color.Black.copy(alpha = (1f - dismissProgress) * animatedAlpha)))
+    // Image pager
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize(),
+        pageSpacing = 12.dp,
+        beyondViewportPageCount = 3,
 
+        userScrollEnabled = gestureState == GestureState.IDLE
+    ) { page ->
+        TransformableImage(
+            image = images[page],
+            onGestureStateUpdate = { gestureState = it},
+            onDismiss = { isDismissing = true },
+            onDismissProgressChange = { dismissProgress = it }
+        )
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = (1f - dismissProgress) * animatedAlpha))
-            .graphicsLayer {
-                // Apply scale animation when dismissing
-                scaleX = animatedScale
-                scaleY = animatedScale
-            }
+            .background(Color.Transparent)
+            .alpha(animatedAlpha)
     ) {
-        // Close button
-        IconButton(
-            onClick = { isDismissing = true },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-                .size(48.dp)
-                .graphicsLayer { alpha = animatedAlpha }
-        ) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Close",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
-            )
-        }
+        Row(Modifier
+            .fillMaxWidth(0.8f)
+            .align(Alignment.TopStart)) {
 
-        // Image pager
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-            userScrollEnabled = gestureState == GestureState.IDLE || gestureState == GestureState.PAGING
-        ) { page ->
-            TransformableImage(
-                image = images[page], 
-                onGestureStateUpdate = { gestureState = it}, 
-                onDismiss = { isDismissing = true },
-                onDismissProgressChange = { dismissProgress = it }
+            IconButton(
+                onClick = { isDismissing = true },
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .padding(16.dp)
+                    .size(48.dp)
+                    .graphicsLayer { alpha = animatedAlpha }
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                    contentDescription = "Close",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Text(
+                text = "${pagerState.currentPage}/${pagerState.pageCount}: ${currentImageInfo.value.description}",
+                color = Color.White,
+                modifier = Modifier.align(Alignment.CenterVertically)
             )
         }
 
@@ -431,8 +479,7 @@ fun MultiImagePreview(images: List<ImageSource>, initialPage: Int, onDismiss: ()
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 16.dp)
-                    .graphicsLayer { alpha = animatedAlpha },
+                    .padding(bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 repeat(images.size) { index ->
@@ -449,6 +496,19 @@ fun MultiImagePreview(images: List<ImageSource>, initialPage: Int, onDismiss: ()
     }
 }
 
+object PreviewPageDefaults {
+    val duration = 250
+    fun <T> tween() = tween<T>(
+        durationMillis = duration,
+        easing = FastOutSlowInEasing
+    )
+    fun <T> spring() = androidx.compose.animation.core.spring<T>(stiffness = Spring.StiffnessMedium)
+
+    val scaleLimitMin = 0.7f
+    val scaleLimitMax = 10f
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TransformableImage(
     image: ImageSource, 
@@ -457,58 +517,109 @@ fun TransformableImage(
     onDismissProgressChange: (Float) -> Unit
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
-    var dismissProgress by remember { mutableFloatStateOf(0f) }
+    var scale = remember { Animatable(1f) }
+    var pivot = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
+    var translation = remember { Animatable(Offset.Zero, Offset.VectorConverter)}
+    var dismissProgress = remember { Animatable(0f) }
     val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp.dp.value
+    val screenHeight = configuration.screenHeightDp.dp.value.takeDp()
+
+    var center = remember { Offset.Unspecified }
+
+    val scope = rememberCoroutineScope()
+
     val dismissThreshold = screenHeight * 0.2f // 20% of screen height for dismiss
     
     // Load full-size image
     LaunchedEffect(image.id) {
         bitmap = image.provideImage()
     }
-    
-    // Update parent with dismiss progress
-    LaunchedEffect(dismissProgress) {
-        onDismissProgressChange(dismissProgress.coerceIn(0f, 1f))
+
+    fun animateTransformTo(targetScale: Float, targetPivot: Offset, targetTranslation: Offset) {
+        scope.launch {
+            launch { pivot.animateTo(targetPivot, PreviewPageDefaults.tween()) }
+            launch { scale.animateTo(targetScale, PreviewPageDefaults.tween()) }
+            launch { translation.animateTo(targetTranslation, PreviewPageDefaults.tween()) }
+        }
     }
     
     Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectTransformGestures { centroid, pan, zoom, rotation ->
-                    if (abs(zoom -1f) > 0.01f) {
-                        // Handle scaling
-                        onGestureStateUpdate(GestureState.SCALING)
-                        scale *= zoom
-                        scale = scale.coerceIn(1f, 3f)
-                        offset += pan
-                        return@detectTransformGestures
-                    }
-                    
-                    if (abs(pan.getDistance()) > 10f) {
-                        if (abs(pan.y) > abs(pan.x)) {
-                            // Handle vertical swipe for dismissal
-                            onGestureStateUpdate(GestureState.SWIPING_TO_DISMISS)
-                            offset += pan
-                            
-                            // Calculate dismiss progress based on vertical drag
-                            dismissProgress = (offset.y / screenHeight).coerceIn(0f, 1f)
-                            
-                            // Trigger dismiss if threshold exceeded
-                            if (offset.y > dismissThreshold) {
-                                onDismiss()
+                detectZoomAndVerticalDrag(
+                    onZoomGesture = { centroid, pan, zoom ->
+//                        log.d("double pointer zoom!")
+                        if (abs(zoom - 1f) > 0.01f) {
+                            scope.launch {
+                                val scaleValue = scale.value * zoom
+                                pivot.snapTo(centroid)
+                                scale.snapTo(
+                                    scaleValue.coerceIn(
+                                        PreviewPageDefaults.scaleLimitMin,
+                                        PreviewPageDefaults.scaleLimitMax
+                                    )
+                                )
+                                translation.snapTo(translation.value + pan)
                             }
-                            return@detectTransformGestures
-                        } else {
-                            // Handle horizontal swipe for paging
-                            onGestureStateUpdate(GestureState.PAGING)
-                            return@detectTransformGestures
+                        }
+                    },
+                    onZoomGestureEnd = {
+                        if (scale.value < 1f) {
+                            animateTransformTo(1f, center, Offset.Zero)
+                        }
+                        log.d("zoom ended")
+                    },
+                    onVerticalDrag = { point, dragChange ->
+                        scope.launch {
+                            translation.snapTo(translation.value + dragChange)
+                            if (scale.value <= 1f) {
+                                //no zoom
+                                dismissProgress.snapTo(
+                                    (translation.value.y.absoluteValue / screenHeight).coerceIn(0f, 1f)
+                                )
+                                scale.snapTo(1f - dismissProgress.value * 0.5f)
+                            }
+                        }
+
+                    },
+                    onVerticalDragStart = {
+                        log.d("drag started")
+                        if (scale.value == 1f) {
+                            onGestureStateUpdate(GestureState.DRAGGING)
+                        }
+                    },
+                    onVerticalDragEnd = {
+                        log.d("drag ended")
+                        onGestureStateUpdate(GestureState.IDLE)
+                        if (translation.value.y > screenHeight * 0.2) {
+                            onDismiss.invoke()
+                            log.d("Will dismiss")
                         }
                     }
-                }
+                )
+
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(onDoubleTap = { point ->
+                    animateTransformTo(
+                        targetPivot = point,
+                        targetScale = if (scale.value < 3f) 3f else 1f,
+                        targetTranslation = Offset.Zero
+                    )
+                })
+            }
+            .graphicsLayer {
+//                log.d("${scale.value}, ${pivot.value}, ${translation.value}")
+                if (center == Offset.Unspecified) center = Offset(size.width / 2, size.height / 2)
+                scaleX = scale.value
+                scaleY = scale.value
+                transformOrigin = TransformOrigin(
+                    pivotFractionX = pivot.value.x / size.width,
+                    pivotFractionY = pivot.value.y / size.height
+                )
+                translationX = translation.value.x
+                translationY = translation.value.y
             }
     ) {
         // Image with transformations
@@ -519,14 +630,6 @@ fun TransformableImage(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer {
-                        // Apply scale and translation
-                        scaleX = scale * (1f - dismissProgress * 0.5f) // Scale down as we drag
-                        scaleY = scale * (1f - dismissProgress * 0.5f)
-                        translationX = offset.x
-                        translationY = offset.y
-                        alpha = 1f - dismissProgress * 0.7f // Fade out as we drag
-                    }
             )
         } ?: Box(
             modifier = Modifier.fillMaxSize(),
@@ -534,5 +637,86 @@ fun TransformableImage(
         ) {
             CircularProgressIndicator(color = Color.White)
         }
+    }
+}
+
+/**
+ * Enable only drag down to start
+ */
+suspend fun PointerInputScope.detectZoomAndVerticalDrag(
+    onZoomGesture: (centroid: Offset, pan: Offset, zoom: Float) -> Unit,
+    onZoomGestureEnd: () -> Unit = {},
+    onVerticalDrag: (point: Offset, delta: Offset) -> Unit,
+    onVerticalDragStart: () -> Unit = {},
+    onVerticalDragEnd: () -> Unit = {}
+) {
+    awaitEachGesture {
+        var zoom = 1f
+        var pan = Offset.Zero
+        var passedZoomTouchSlop = false
+        var passedDragTouchSlop = false
+        val touchSlop = viewConfiguration.touchSlop
+
+        awaitFirstDown(requireUnconsumed = false)
+        do {
+            val event = awaitPointerEvent()
+            val canceled = event.changes.fastAny { it.isConsumed }
+            val touchCount = event.changes.fastSumBy { if (it.pressed) 1 else 0 }
+            if (!canceled) {
+                if (touchCount == 1) {
+                    val dragChange = event.calculatePan()
+                    if (!passedDragTouchSlop) {
+                        if (dragChange.getDistance() > touchSlop && dragChange.y > dragChange.x.absoluteValue) {
+                            passedDragTouchSlop = true
+                            onVerticalDragStart()
+                        }
+                    }
+                    if (passedDragTouchSlop) {
+                        onVerticalDrag(event.changes[0].position, dragChange)
+                        event.changes[0].consume()
+                    }
+                } else if (touchCount > 1) {
+                    val zoomChange = event.calculateZoom()
+                    val panChange = event.calculatePan()
+
+                    if (!passedZoomTouchSlop) {
+                        zoom *= zoomChange
+                        pan += panChange
+
+                        val centroidSize = event.calculateCentroidSize(useCurrent = false)
+                        val zoomMotion = abs(1 - zoom) * centroidSize
+                        val panMotion = pan.getDistance()
+
+                        if (zoomMotion > touchSlop ||
+                            panMotion > touchSlop
+                        ) {
+                            passedZoomTouchSlop = true
+                        }
+                    }
+
+                    if (passedZoomTouchSlop) {
+                        val centroid = event.calculateCentroid(useCurrent = false)
+                        if (zoomChange != 1f ||
+                            panChange != Offset.Zero
+                        ) {
+                            onZoomGesture(centroid, panChange, zoomChange)
+                        }
+                        event.changes.fastForEach {
+                            if (it.positionChanged()) {
+                                it.consume()
+                            }
+                        }
+                    }
+                }
+
+            }
+        } while (!canceled && touchCount > 0)
+
+        if (passedDragTouchSlop) {
+            onVerticalDragEnd()
+        } else if (passedZoomTouchSlop) {
+            onZoomGestureEnd()
+        }
+
     }
 }

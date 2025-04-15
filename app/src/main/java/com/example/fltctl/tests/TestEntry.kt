@@ -36,6 +36,7 @@ import com.example.fltctl.ui.theme.LocalEInkMode
 import com.example.fltctl.widgets.composable.DualStateListDialog
 import com.example.fltctl.widgets.composable.DualStateListItem
 import com.example.fltctl.widgets.composable.EInkCompatCard
+import logTrimmer
 
 /**
  * Created by zeyu.zyzhang on 3/6/25
@@ -46,14 +47,19 @@ object TestEntry {
         FloatingControlIntegrationTest(),
         albumPreviewUiTest,
         LogViewer(),
-        textViewEllipsizeTest
+        textViewEllipsizeTest,
+        CrashTest()
+    )
+
+    private val debugOnly = mutableSetOf<UiTest>(
+        logTrimmer
     )
 
     @Composable
     fun TestSelectionEntry(dismissHandle: () -> Unit) {
         val ctx = LocalContext.current
         DualStateListDialog<UiTest>(
-            items = registry.map { DualStateListItem(true, it.title, it) },
+            items = registry.map { it.onEntryShow(); DualStateListItem(true, it.title, it) },
             title = "Select a UI Test",
             onItemSelected = { test -> test?.let { enterTest(ctx, it) }; dismissHandle() },
             onDismissRequest = dismissHandle,
@@ -64,6 +70,7 @@ object TestEntry {
         @OptIn(ExperimentalMaterial3Api::class)
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
+            val tests = registry.toMutableList().apply { addAll(debugOnly) }
 //            enableEdgeToEdge()
             setContent {
                 FltCtlTheme {
@@ -71,12 +78,14 @@ object TestEntry {
                         topBar = { TopAppBar(title = { Text("Test Entry") }) }
                     ) { innerPadding ->
                         val listScrollState = rememberScrollState()
-                        Column(Modifier
-                            .padding(innerPadding)
-                            .padding(horizontal = 10.dp)
-                            .fillMaxWidth()
-                            .scrollable(listScrollState, Orientation.Vertical)) {
-                            registry.forEach { uiTest ->
+                        Column(
+                            Modifier
+                                .padding(innerPadding)
+                                .padding(horizontal = 10.dp)
+                                .fillMaxWidth()
+                                .scrollable(listScrollState, Orientation.Vertical)
+                        ) {
+                            tests.forEach { uiTest ->
                                 Spacer(Modifier.height(10.dp))
                                 EInkCompatCard(LocalEInkMode.current, Modifier.clickable {
                                     enterTest(this@TestEntryListActivity, uiTest)

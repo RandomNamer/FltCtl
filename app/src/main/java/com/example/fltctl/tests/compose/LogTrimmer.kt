@@ -35,6 +35,7 @@ import com.example.fltctl.tests.UiTest
 import com.example.fltctl.tests.controls.SimpleLogAdapter.LogViewHolder.Companion.logLevelAsColor
 import com.example.fltctl.ui.theme.FltCtlTheme
 import com.example.fltctl.ui.theme.LocalEInkMode
+import com.example.fltctl.ui.theme.isInEInkMode
 import com.example.fltctl.utils.MmapLogProxy
 import com.example.fltctl.utils.logLevel
 import com.example.fltctl.utils.track
@@ -222,7 +223,7 @@ fun LogContentDialog(fileInfo: LogFileInfo, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    FltCtlTheme(darkTheme = false) {
+    FltCtlTheme(darkTheme = false, eInkTheme = isInEInkMode) {
         DualStateListDialog(
             items = contentState.value,
             title = "Log Content",
@@ -232,10 +233,8 @@ fun LogContentDialog(fileInfo: LogFileInfo, onDismiss: () -> Unit) {
                     text = it.text,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(it.payload ?: android.graphics.Color.BLACK),
-                    modifier = Modifier.padding(end = 8.dp)
                 )
             },
-            eInkMode = LocalEInkMode.current,
 //            mainAction = "Export" to {
 //                scope.launch(Dispatchers.IO) {
 //                    val text = MmapLogProxy.getInstance().getLogsOfFile(fileInfo.fileName)

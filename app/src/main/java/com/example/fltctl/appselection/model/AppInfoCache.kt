@@ -1,5 +1,6 @@
 package com.example.fltctl.appselection.model
 
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import com.example.fltctl.AppMonitor
 import kotlinx.coroutines.channels.BufferOverflow

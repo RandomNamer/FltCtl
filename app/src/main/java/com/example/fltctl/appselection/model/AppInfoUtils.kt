@@ -10,6 +10,7 @@ import android.net.Uri
 import android.widget.Toast
 import com.example.fltctl.AppMonitor
 import com.example.fltctl.appselection.ui.PackageFilterCriterion
+import com.example.fltctl.utils.LogProxy
 import com.example.fltctl.utils.logs
 
 const val TAG_APPINF = "AppInfInfra"

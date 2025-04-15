@@ -18,7 +18,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.PrintWriter
 import java.io.RandomAccessFile
+import java.io.StringWriter
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.text.SimpleDateFormat
@@ -157,10 +159,14 @@ class MmapLogger private constructor(
         return channel.map(FileChannel.MapMode.READ_WRITE, 0, size.toLong())
     }
 
-    internal fun log(timestamp: Long, level: Int, tag: String, message: String) {
+    internal fun logAsync(timestamp: Long, level: Int, tag: String, message: String) {
         scope.launch {
             writeTextEntry(timestamp, level, tag, message)
         }
+    }
+
+    internal fun logSync(timestamp: Long, level: Int, tag: String, message: String) {
+        writeTextEntrySync(timestamp, level, tag, message)
     }
 
     private fun getLevelChar(level: Int): Char {
@@ -176,26 +182,30 @@ class MmapLogger private constructor(
 
     private suspend fun writeTextEntry(timestamp: Long, level: Int, tag: String, message: String) {
         withContext(Dispatchers.IO) {
-            synchronized(currentBuffer) {
-                // Format log entry as plain text: "yyyy-MM-dd HH:mm:ss.SSS L/TAG: Message\n"
-                val formattedTime = dateFormat.format(Date(timestamp))
-                val levelChar = getLevelChar(level)
-                val logText = "$formattedTime $levelChar/$tag: $message\n"
-                val logBytes = logText.toByteArray()
+            writeTextEntrySync(timestamp, level, tag, message)
+        }
+    }
 
-                // Check if we need to rotate
-                if (position.get() + logBytes.size > bufferSize) {
-                    rotateLogFile()
-                }
+    private inline fun writeTextEntrySync(timestamp: Long, level: Int, tag: String, message: String) {
+        synchronized(currentBuffer) {
+            // Format log entry as plain text: "yyyy-MM-dd HH:mm:ss.SSS L/TAG: Message\n"
+            val formattedTime = dateFormat.format(Date(timestamp))
+            val levelChar = getLevelChar(level)
+            val logText = "$formattedTime $levelChar/$tag: $message\n"
+            val logBytes = logText.toByteArray()
 
-                // Write to buffer
-                val pos = position.get()
-                currentBuffer.position(pos)
-                currentBuffer.put(logBytes)
-
-                // Update position
-                position.addAndGet(logBytes.size)
+            // Check if we need to rotate
+            if (position.get() + logBytes.size > bufferSize) {
+                rotateLogFile()
             }
+
+            // Write to buffer
+            val pos = position.get()
+            currentBuffer.position(pos)
+            currentBuffer.put(logBytes)
+
+            // Update position
+            position.addAndGet(logBytes.size)
         }
     }
 
@@ -270,7 +280,7 @@ class MmapLogger private constructor(
 
     fun getLogsOfFile(filename: String): String {
         if (filename == currentFile.name) {
-            return "This log file is in use"
+            return getCurrentLogs()
         } else {
             val logFile = File(context.filesDir, "logs/$filename")
             if (!logFile.exists()) {
@@ -350,11 +360,15 @@ class MmapLogProxy private constructor(
         }
 
         // 2. Log to memory-mapped file (will be processed in background)
-        mmapLogger.log(System.currentTimeMillis(), level, tag, message)
+        mmapLogger.logAsync(System.currentTimeMillis(), level, tag, message)
+    }
+
+    internal fun logSync(level: Int, tag: String, message: String) {
+        mmapLogger.logSync(System.currentTimeMillis(), level, tag, message)
     }
 
     fun flush() {
-        this.log(LogProxy.DEBUG, MmapLogger.TAG, "flush requested")
+        this.log(LogProxy.VERBOSE, MmapLogger.TAG, "flush requested")
         mmapLogger.flush()
     }
 
@@ -427,6 +441,10 @@ fun logs(tag: String): LogLazy {
     return LogLazy(null, tag)
 }
 
+fun androidLogs(tag: String): Lazy<Logger> = lazy {
+    Logger(tag, LogProxy.getAndroid())
+}
+
 /**
  * Logger class for convenient logging
  */
@@ -452,7 +470,7 @@ fun String.logLevel(): Int {
     }
 }
 
-val trackLogger = Logger("Tracker", LogProxy.getAndroid())
+private val trackLogger = Logger("Tracker", LogProxy.getAndroid())
 
 fun track(name: String, payload: () -> Unit) {
 //    val callPlace = Exception().stackTrace.firstOrNull {
@@ -463,4 +481,10 @@ fun track(name: String, payload: () -> Unit) {
     payload.invoke()
     val time = SystemClock.elapsedRealtime() - start
     trackLogger.d("$name: Duration $time ms.")
+}
+
+fun Throwable.stackTraceAsString(): String {
+    val stringWriter = StringWriter()
+    printStackTrace(PrintWriter(stringWriter))
+    return stringWriter.toString()
 }

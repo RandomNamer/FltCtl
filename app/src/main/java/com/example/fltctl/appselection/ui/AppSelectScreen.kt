@@ -89,7 +89,7 @@ fun AppSelectScreen(vm: AppSelectPageVM, onSelectEnd: () -> Unit, onBackPressedD
                 ctx.openAppSettingsPage(currentAppInfo.packageName)
             },
             footer = {
-                Box(Modifier.fillMaxWidth()) {
+                Box(Modifier.fillMaxWidth().wrapContentHeight()) {
                     Text(
                         text = stringResource(R.string.app_selection_activity_counts, exportedCount, activityCount),
                         modifier = Modifier.align(Alignment.TopCenter)

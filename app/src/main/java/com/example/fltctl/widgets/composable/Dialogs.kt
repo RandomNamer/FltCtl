@@ -114,7 +114,7 @@ fun <T: Any> DualStateListDialog(
         },
         text = {
             Column (Modifier.fillMaxWidth()) {
-                Box(if (items.size > LIST_USE_FULL_HEIGHT_THRESH) Modifier else Modifier.height(300.dp)) {
+                Box(if (items.size > LIST_USE_FULL_HEIGHT_THRESH) Modifier.weight(1f) else Modifier.height(300.dp)) {
 
                     if (items.size > LIST_USE_LAZY_THRESH) {
                         val lazyListState = rememberLazyListState()
