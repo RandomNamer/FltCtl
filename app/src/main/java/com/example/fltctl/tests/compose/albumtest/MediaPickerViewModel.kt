@@ -26,7 +26,8 @@ data class MediaPickerState(
     val maxSelectCount: Int = 15,
     val tabs: List<UiTabItem> = emptyList(),
     val currentPage: Int = 0,
-    val hasMoreItems: Boolean = true
+    val hasMoreItems: Boolean = true,
+    val currentPreviewImageIndex: Int = -1,
 )
 
 data class TabItem(
@@ -37,6 +38,7 @@ data class TabItem(
     fun toUiItem() = UiTabItem(title = text, type = type)
 }
 
+@Stable
 data class UiTabItem(
     val title: String,
     val type: ImageRepository.Type,
@@ -53,6 +55,11 @@ class MediaPickerViewModel: ViewModel() {
             text = "BlurHash Images",
             type = ImageRepository.Type.BLURHASH,
             repository = ImageRepository.create(ImageRepository.Type.BLURHASH)
+        ),
+        TabItem(
+            text = "Checkerboard",
+            type = ImageRepository.Type.CHECKERBORAD,
+            repository = ImageRepository.create(ImageRepository.Type.CHECKERBORAD)
         )
     )
     
@@ -147,5 +154,9 @@ class MediaPickerViewModel: ViewModel() {
     
     fun clearSelection() {
         state = state.copy(selectedImages = emptyList())
+    }
+
+    fun onPreviewPageChange(index: Int) {
+        state = state.copy(currentPreviewImageIndex = index)
     }
 }

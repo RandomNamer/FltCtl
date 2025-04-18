@@ -32,7 +32,7 @@
 
         <activity
             android:name=".tests.ViewBasedTestsContainerActivity"
-            android:configChanges="layoutDirection|screenLayout|orientation|screenSize|keyboard|keyboardHidden"
+            android:configChanges="layoutDirection|screenLayout|orientation|screenSize|keyboard|keyboardHidden|smallestScreenSize"
             android:exported="false"
             android:theme="@style/Theme.wTitleBar" />
         <activity

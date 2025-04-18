@@ -5,15 +5,20 @@ package com.example.fltctl.tests.compose.albumtest
  * @author zeyu.zyzhang@bytedance.com
  */
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import androidx.compose.runtime.Stable
 import androidx.core.graphics.createBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.lang.ref.WeakReference
 import kotlin.math.min
 import kotlin.random.Random
 
 // ======= MODEL LAYER =======
 
+@Stable
 // Interface for image sources
 interface ImageSource {
     // Unique identifier for the image
@@ -39,7 +44,35 @@ abstract class BaseImageSource(
     override val description: String,
     override val width: Int,
     override val height: Int
-) : ImageSource
+) : ImageSource {
+
+    companion object {
+        // Resolution ranges for different image orientations
+        val portraitWidthRange = 750..1250
+        val portraitHeightRange = 1500..2250
+
+        val landscapeWidthRange = 1500..2250
+        val landscapeHeightRange = 750..1250
+
+        val squareRange = 1000..2000
+    }
+
+    protected fun getDefaultThumbnailSize(): Pair<Int, Int> {
+        val maxThumbnailDimension = 150
+        val thumbnailWidth: Int
+        val thumbnailHeight: Int
+
+        if (width >= height) {
+            thumbnailWidth = min(maxThumbnailDimension, width)
+            thumbnailHeight = (height.toFloat() * thumbnailWidth / width).toInt()
+        } else {
+            thumbnailHeight = min(maxThumbnailDimension, height)
+            thumbnailWidth = (width.toFloat() * thumbnailHeight / height).toInt()
+        }
+        return Pair(thumbnailWidth, thumbnailHeight)
+    }
+
+}
 
 // Pure color image source implementation
 class ColorImageSource private constructor(
@@ -82,14 +115,7 @@ class ColorImageSource private constructor(
             "Misty morning"
         )
 
-        // Resolution ranges for different image orientations
-        private val portraitWidthRange = 750..1250
-        private val portraitHeightRange = 1500..2250
 
-        private val landscapeWidthRange = 1500..2250
-        private val landscapeHeightRange = 750..1250
-
-        private val squareRange = 2000..4000
 
         fun createSources(count: Int): List<ImageSource> {
             return List(count) { index ->
@@ -135,20 +161,7 @@ class ColorImageSource private constructor(
     }
 
     override suspend fun provideThumbnail(): Bitmap {
-        // Calculate thumbnail dimensions while preserving aspect ratio
-        val maxThumbnailDimension = 150
-        val thumbnailWidth: Int
-        val thumbnailHeight: Int
-
-        if (width >= height) {
-            // Landscape or square orientation
-            thumbnailWidth = min(maxThumbnailDimension, width)
-            thumbnailHeight = (height.toFloat() * thumbnailWidth / width).toInt()
-        } else {
-            // Portrait orientation
-            thumbnailHeight = min(maxThumbnailDimension, height)
-            thumbnailWidth = (width.toFloat() * thumbnailHeight / height).toInt()
-        }
+        val (thumbnailWidth, thumbnailHeight) = getDefaultThumbnailSize()
 
         return createBitmap(thumbnailWidth, thumbnailHeight).apply {
             eraseColor(color)
@@ -213,15 +226,6 @@ class BlurHashImageSource private constructor(
 
             return hashBuilder.toString()
         }
-
-        // Resolution ranges for different image orientations
-        private val portraitWidthRange = 750..1250
-        private val portraitHeightRange = 1500..2250
-
-        private val landscapeWidthRange = 1500..2250
-        private val landscapeHeightRange = 750..1250
-
-        private val squareRange = 2000..4000
 
         // Factory method to create a collection of BlurHash image sources
         fun createSources(count: Int): List<BlurHashImageSource> {
@@ -303,28 +307,114 @@ class BlurHashImageSource private constructor(
         }
     }
 
-    override suspend fun provideThumbnail(): Bitmap {
-        // Calculate thumbnail dimensions while preserving aspect ratio
-        val maxThumbnailDimension = 150
-        val thumbnailWidth: Int
-        val thumbnailHeight: Int
+    private var thumbnailCache: WeakReference<Bitmap> = WeakReference(null)
 
-        if (width >= height) {
-            thumbnailWidth = min(maxThumbnailDimension, width)
-            thumbnailHeight = (height.toFloat() * thumbnailWidth / width).toInt()
-        } else {
-            thumbnailHeight = min(maxThumbnailDimension, height)
-            thumbnailWidth = (width.toFloat() * thumbnailHeight / height).toInt()
+    private var imageCache: WeakReference<Bitmap> = WeakReference(null)
+
+    override suspend fun provideThumbnail(): Bitmap {
+        thumbnailCache.get()?.let { return it } ?: run {
+            val (thumbnailWidth, thumbnailHeight) = getDefaultThumbnailSize()
+            return decodeBlurHash(blurHash, thumbnailWidth, thumbnailHeight).also {
+                thumbnailCache = WeakReference(it)
+            }
+        }
+    }
+
+    override suspend fun provideImage(): Bitmap {
+        return imageCache.get()?.let { return it }?: withContext(Dispatchers.IO) {
+            decodeBlurHash(blurHash, width, height).also {
+                imageCache = WeakReference(it)
+            }
+        }
+    }
+}
+
+class CheckerboardImageSource private constructor(
+    id: String,
+    description: String,
+    width: Int,
+    height: Int,
+    private val tileSize: Int
+) : BaseImageSource(id, description, width, height) {
+    companion object {
+        private val portraitWidthRange = 750..1250
+        private val portraitHeightRange = 1500..2250
+
+        private val landscapeWidthRange = 1500..2250
+        private val landscapeHeightRange = 750..1250
+
+        private val squareRange = 1000..2000
+
+        private val tileSizeRange = 50..200
+
+        fun createSources(count: Int): List<CheckerboardImageSource> = List(count) { index ->
+                val random = Random(index + 1)
+                // Decide on orientation (1: portrait, 2: landscape, 3: square)
+                val orientation = random.nextInt(1, 4)
+                // Generate width and height based on orientation
+                val (width, height, tileSize) = when (orientation) {
+                    1 -> { // Portrait
+                        Triple(
+                            random.nextInt(portraitWidthRange.first, portraitWidthRange.last),
+                            random.nextInt(portraitHeightRange.first, portraitHeightRange.last),
+                            random.nextInt(tileSizeRange.first, tileSizeRange.last)
+                        )
+                    }
+                    2 -> { // Landscape
+                        Triple(
+                            random.nextInt(landscapeWidthRange.first, landscapeWidthRange.last),
+                            random.nextInt(landscapeHeightRange.first, landscapeHeightRange.last),
+                            random.nextInt(tileSizeRange.first, tileSizeRange.last)
+                        )
+                }
+                    else -> { // Square
+                        val size = random.nextInt(squareRange.first, squareRange.last)
+                        Triple(size, size, random.nextInt(tileSizeRange.first, tileSizeRange.last))
+                    }
+                }
+                val description = "Checkerboard $tileSize x $tileSize"
+                CheckerboardImageSource(
+                    id = "checkerboard_$index",
+                    description = description,
+                    width = width,
+                    height = height,
+                    tileSize = tileSize
+                )
         }
 
-        // Generate a BlurHash-based thumbnail
-        // In a real implementation, you would use a proper BlurHash library
-        return decodeBlurHash(blurHash, thumbnailWidth, thumbnailHeight)
+        private fun generateCheckerboard(w: Int, h: Int, fgColor: Int = Color.BLACK, bgColor: Int = Color.WHITE, tileSize: Int): Bitmap {
+            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565)
+            val canvas = Canvas(bitmap)
+            val paint = Paint()
+
+            for (y in 0 until h step tileSize) {
+                for (x in 0 until w step tileSize) {
+                    paint.color = if ((x / tileSize + y / tileSize) % 2 == 0) fgColor else bgColor
+                    canvas.drawRect(
+                        x.toFloat(),
+                        y.toFloat(),
+                        minOf(x + tileSize, w).toFloat(),
+                        minOf(y + tileSize, h).toFloat(),
+                        paint
+                    )
+                }
+            }
+            return bitmap
+        }
+    }
+
+    override suspend fun provideThumbnail(): Bitmap {
+        val (thumbnailWidth, thumbnailHeight) = getDefaultThumbnailSize()
+        val scalingFactor = minOf(
+            thumbnailWidth.toFloat() / width.toFloat(),
+            thumbnailHeight.toFloat() / height.toFloat()
+        )
+        return generateCheckerboard(thumbnailWidth, thumbnailHeight, tileSize = (tileSize * scalingFactor).toInt())
     }
 
     override suspend fun provideImage(): Bitmap {
         return withContext(Dispatchers.Default) {
-            decodeBlurHash(blurHash, width, height)
+            generateCheckerboard(width, height, tileSize = tileSize)
         }
     }
 }
@@ -341,6 +431,7 @@ abstract class ImageRepository {
         fun create(type: Type): ImageRepository = when (type) {
             Type.COLOR -> ColorTileImageRepo()
             Type.BLURHASH -> BlurHashImageRepo()
+            Type.CHECKERBORAD -> CheckerboardImageRepo()
             else -> object: ImageRepository() {
                 override suspend fun load(cursor: Int, count: Int)= emptyList<ImageSource>()
                 override suspend fun count(): Int = 0
@@ -351,6 +442,7 @@ abstract class ImageRepository {
     enum class Type{
         COLOR,
         BLURHASH,
+        CHECKERBORAD,
         SYSTEM_ALBUM
     }
 
@@ -361,23 +453,31 @@ abstract class ImageRepository {
     abstract suspend fun count(): Int
 }
 
-class ColorTileImageRepo(private val count: Int = DEFAULT_TEST_REPO_SIZE): ImageRepository() {
-    override suspend fun load(cursor: Int, count: Int): List<ImageSource> = ColorImageSource.createSources(count)
+abstract class BaseGeneratedImageRepo: ImageRepository() {
+    private val _all = mutableListOf<ImageSource>()
 
-    override suspend fun count(): Int = count
-}
-
-class BlurHashImageRepo(private val count: Int = DEFAULT_TEST_REPO_SIZE) : ImageRepository() {
-    companion object {
-        private val _all = mutableListOf<BlurHashImageSource>()
-    }
-
-    override suspend fun load(cursor: Int, count: Int): List<ImageSource> {
+    final override suspend fun load(cursor: Int, count: Int): List<ImageSource> {
         val generationsNeeded = cursor + count - _all.count()
-        if (generationsNeeded > 0) BlurHashImageSource.createSources(generationsNeeded).also { _all.addAll(it) }
+        if (generationsNeeded > 0) generateImageSources(generationsNeeded).also { _all.addAll(it) }
         return _all.slice(cursor..cursor + count-1)
     }
 
+    abstract suspend fun generateImageSources(count: Int): List<ImageSource>
+}
+
+class ColorTileImageRepo(private val count: Int = DEFAULT_TEST_REPO_SIZE): BaseGeneratedImageRepo() {
+    override suspend fun generateImageSources(count: Int): List<ImageSource> = ColorImageSource.createSources(count)
+    override suspend fun count(): Int = count
+}
+
+class BlurHashImageRepo(private val count: Int = DEFAULT_TEST_REPO_SIZE) : BaseGeneratedImageRepo() {
     override suspend fun count(): Int = count
 
+    override suspend fun generateImageSources(count: Int): List<ImageSource> = BlurHashImageSource.createSources(count)
+
+}
+
+class CheckerboardImageRepo(private val count: Int = DEFAULT_TEST_REPO_SIZE): BaseGeneratedImageRepo() {
+    override suspend fun generateImageSources(count: Int) = CheckerboardImageSource.createSources(count)
+    override suspend fun count(): Int = count
 }
