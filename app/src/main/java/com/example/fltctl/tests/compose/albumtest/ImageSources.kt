@@ -10,6 +10,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import androidx.compose.runtime.Stable
 import androidx.core.graphics.createBitmap
+import com.example.fltctl.AppMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.lang.ref.WeakReference
@@ -432,6 +433,9 @@ abstract class ImageRepository {
             Type.COLOR -> ColorTileImageRepo()
             Type.BLURHASH -> BlurHashImageRepo()
             Type.CHECKERBORAD -> CheckerboardImageRepo()
+            Type.SYSTEM_ALBUM -> {
+                SystemAlbumImageRepo(AppMonitor.appContext)
+            }
             else -> object: ImageRepository() {
                 override suspend fun load(cursor: Int, count: Int)= emptyList<ImageSource>()
                 override suspend fun count(): Int = 0

@@ -3,10 +3,13 @@ package com.example.fltctl.widgets.composable
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -61,3 +64,10 @@ fun CornerSize.toDp(): Dp = this@toDp.toPx().toDp()
 
 @Composable
 fun Float.toDp() : Dp = (this / 1.dp.toPx()).dp
+
+@Composable
+fun Modifier.simplyScrollable(): Modifier = composed {
+    val vss = rememberScrollState()
+    val hss = rememberScrollState()
+    return@composed this.verticalScroll(vss).horizontalScroll(hss)
+}

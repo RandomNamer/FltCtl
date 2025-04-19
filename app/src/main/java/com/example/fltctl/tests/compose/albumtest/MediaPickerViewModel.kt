@@ -44,7 +44,7 @@ data class UiTabItem(
     val type: ImageRepository.Type,
 )
 
-class MediaPickerViewModel: ViewModel() {
+class MediaPickerViewModel(): ViewModel() {
     private val tabs = listOf(
         TabItem(
             text = "Color Images",
@@ -60,6 +60,11 @@ class MediaPickerViewModel: ViewModel() {
             text = "Checkerboard",
             type = ImageRepository.Type.CHECKERBORAD,
             repository = ImageRepository.create(ImageRepository.Type.CHECKERBORAD)
+        ),
+        TabItem(
+            text = "System Album",
+            type = ImageRepository.Type.SYSTEM_ALBUM,
+            repository = ImageRepository.create(ImageRepository.Type.SYSTEM_ALBUM)
         )
     )
     
@@ -91,7 +96,7 @@ class MediaPickerViewModel: ViewModel() {
                     hasMoreItems = images.size < totalCount
                 )
             } catch (e: Exception) {
-                state = state.copy(error = e.message, isLoading = false)
+                state = state.copy(error = e.stackTraceToString(), isLoading = false)
             }
         }
     }
@@ -121,7 +126,7 @@ class MediaPickerViewModel: ViewModel() {
                     state = state.copy(isLoadingMore = false, hasMoreItems = false)
                 }
             } catch (e: Exception) {
-                state = state.copy(error = e.message, isLoadingMore = false)
+                state = state.copy(error = e.stackTraceToString(), isLoadingMore = false)
             }
         }
     }

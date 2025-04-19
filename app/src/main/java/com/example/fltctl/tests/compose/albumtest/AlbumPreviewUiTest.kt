@@ -87,6 +87,8 @@ import com.example.fltctl.AppMonitor
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.ui.theme.FltCtlTheme
 import com.example.fltctl.utils.androidLogs
+import com.example.fltctl.widgets.composable.EInkCompatCard
+import com.example.fltctl.widgets.composable.simplyScrollable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
@@ -140,65 +142,68 @@ fun BoxScope.Album() {
         if (!showImagePreview) viewModel.onPreviewPageChange(-1 )
     }
     
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Tab layout
-        TabRow(
-            selectedTabIndex = state.currentTab,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            state.tabs.forEachIndexed { index, tab ->
-                Tab(
-                    selected = state.currentTab == index,
-                    onClick = { 
-                        scope.launch { pagerState.animateScrollToPage(index) }
+    FltCtlTheme(darkTheme = false) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Tab layout
+            TabRow(
+                selectedTabIndex = state.currentTab,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                state.tabs.forEachIndexed { index, tab ->
+                    Tab(
+                        selected = state.currentTab == index,
+                        onClick = {
+                            scope.launch { pagerState.animateScrollToPage(index) }
+                        },
+                        text = { Text(tab.title) }
+                    )
+                }
+            }
+
+            // ViewPager with image grids
+            HorizontalPager(
+                state = pagerState,
+                beyondViewportPageCount = 2,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) { page ->
+                ImageGrid(
+                    images = state.listItems,
+                    isLoading = state.isLoading,
+                    errorMsg = state.error,
+                    onImageClick = { viewModel.toggleImageSelection(it) },
+                    isSelected = { viewModel.isImageSelected(it) }
+                )
+            }
+
+            // Selected images row
+            if (state.selectedImages.isNotEmpty()) {
+                SelectedThumbnailRow(
+                    selectedImages = state.selectedImages,
+                    maxSelectCount = state.maxSelectCount,
+                    clearSelection = viewModel::clearSelection,
+                    toggleImageSelection = viewModel::toggleImageSelection,
+                    onClickThumbnail = {
+                        viewModel.onPreviewPageChange(it)
+                        showImagePreview = true
                     },
-                    text = { Text(tab.title) }
+                    previewIndex = state.currentPreviewImageIndex,
+                    onPreviewImageBoundSet = {currentPreviewThumbRect = it}
                 )
             }
         }
-        
-        // ViewPager with image grids
-        HorizontalPager(
-            state = pagerState,
-            beyondViewportPageCount = 2,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) { page ->
-            ImageGrid(
-                images = state.listItems,
-                isLoading = state.isLoading,
-                onImageClick = { viewModel.toggleImageSelection(it) },
-                isSelected = { viewModel.isImageSelected(it) }
-            )
-        }
-        
-        // Selected images row
-        if (state.selectedImages.isNotEmpty()) {
-            SelectedThumbnailRow(
-                selectedImages = state.selectedImages,
-                maxSelectCount = state.maxSelectCount,
-                clearSelection = viewModel::clearSelection,
-                toggleImageSelection = viewModel::toggleImageSelection,
-                onClickThumbnail = {
-                    viewModel.onPreviewPageChange(it)
-                    showImagePreview = true
-                },
-                previewIndex = state.currentPreviewImageIndex,
-                onPreviewImageBoundSet = {currentPreviewThumbRect = it}
-            )
-        }
-    }
-    
-    // Multi-image preview with animation
-    if (showImagePreview && state.selectedImages.isNotEmpty()) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            MultiImagePreview(
-                images = state.selectedImages,
-                initialPage = state.currentPreviewImageIndex,
-                onDismiss = { showImagePreview = false },
-                currentThumbRect = currentPreviewThumbRect
-            )
+
+        // Multi-image preview with animation
+        if (showImagePreview && state.selectedImages.isNotEmpty()) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                MultiImagePreview(
+                    images = state.selectedImages,
+                    initialPage = state.currentPreviewImageIndex,
+                    onDismiss = { showImagePreview = false },
+                    currentThumbRect = currentPreviewThumbRect
+                )
+            }
         }
     }
 }
@@ -207,6 +212,7 @@ fun BoxScope.Album() {
 fun ImageGrid(
     images: List<ImageSource>,
     isLoading: Boolean,
+    errorMsg: String? = null,
     onImageClick: (ImageSource) -> Unit,
     isSelected: (ImageSource) -> Boolean,
     viewModel: MediaPickerViewModel = viewModel()
@@ -214,6 +220,13 @@ fun ImageGrid(
     Box(modifier = Modifier.fillMaxSize()) {
         if (isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        } else if (errorMsg != null) {
+            EInkCompatCard(
+                isInEInkMode = false,
+                modifier = Modifier.align(Alignment.Center).padding(16.dp)
+            ) {
+                Text(text = errorMsg, modifier = Modifier.align(Alignment.CenterHorizontally).fillMaxSize().padding(16.dp).simplyScrollable())
+            }
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
@@ -229,7 +242,7 @@ fun ImageGrid(
                         isSelected = isSelected(image)
                     )
                 }
-                
+
                 // Add loading indicator at the bottom when loading more
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     if (viewModel.state.isLoadingMore) {
@@ -780,7 +793,7 @@ fun TransformableImage(
             Image(
                 bitmap = it.asImageBitmap(),
                 contentDescription = image.description,
-                contentScale = ContentScale.Fit,
+                contentScale = ContentScale.FillWidth,
                 modifier = Modifier
                     .wrapContentSize()
                     .align(Alignment.Center)
