@@ -52,6 +52,7 @@ suspend fun PointerInputScope.detectZoomAndDrag(
             val touchCount = event.changes.fastSumBy { if (it.pressed) 1 else 0 }
             if (!canceled) {
                 if (touchCount == 1) {
+                    if (passedZoomTouchSlop) break
                     val targetInputChange = event.changes[0]
                     val dragChange = event.calculatePan()
                     if (!passedDragTouchSlop && dragChange.getDistance() > touchSlop) {
@@ -66,6 +67,7 @@ suspend fun PointerInputScope.detectZoomAndDrag(
                         targetInputChange.consume()
                     }
                 } else if (touchCount > 1) {
+                    if (passedDragTouchSlop) break
                     val zoomChange = event.calculateZoom()
                     val panChange = event.calculatePan()
 
@@ -174,19 +176,21 @@ fun calculateDragAmountForZoom(target: Rect, bounds: Rect, drag: Offset): Offset
 }
 
 fun Offset.pivotFractionIn(bounds: Rect, allowOob: Boolean = false): Offset {
-    val coercedOffset = Offset(
+    val coercedPivot = Offset(
         x = x.coerceIn(bounds.left, bounds.right),
         y = y.coerceIn(bounds.top, bounds.bottom)
     )
 
-    val finalOffset = if (allowOob) this else coercedOffset
+    val finalPivot = if (allowOob) this else coercedPivot
 
-    val pivotX = if (bounds.width == 0f) 0f else (finalOffset.x - bounds.left) / bounds.width
-    val pivotY = if (bounds.height == 0f) 0f else (finalOffset.y - bounds.top) / bounds.height
+    val pivotX = if (bounds.width == 0f) 0f else (finalPivot.x - bounds.left) / bounds.width
+    val pivotY = if (bounds.height == 0f) 0f else (finalPivot.y - bounds.top) / bounds.height
 
-    log.d("pivot frac calc: $this in $bounds > ($pivotX, $pivotY)")
+    var pivotFrac = Offset(pivotX, pivotY)
 
-    return Offset(pivotX, pivotY)
+    log.d("pivot frac calc: $this in $bounds > $pivotFrac")
+
+    return pivotFrac
 }
 
 fun Offset.pivotIn(bounds: Rect, allowOob: Boolean = false): Offset {

@@ -115,6 +115,7 @@ internal val log by androidLogs("AlbumTest")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BoxScope.Album() {
+    log.enable(false)
     val viewModel: MediaPickerViewModel = viewModel()
     val state = viewModel.state
     val scope = rememberCoroutineScope()
@@ -566,18 +567,19 @@ fun TransformableImage(
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var scale = remember { Animatable(1f) }
-    var pivot = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
+//    var pivot = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
     var translation = remember { Animatable(Offset.Zero, Offset.VectorConverter)}
     var dismissProgress = remember { Animatable(0f) }
 
-    var imageBounds =  Rect.Zero
+    var imageBounds = Rect.Zero
+
+    var originalImageBounds = Rect.Zero
 
     //clipped
     var imageBoundsOnScreen = Rect.Zero
 
     var containerBounds = Rect.Zero
 
-    var center = Offset(0.5f, 0.5f)
 
     val scope = rememberCoroutineScope()
 
@@ -595,21 +597,16 @@ fun TransformableImage(
 
     fun isInZoom(): Boolean = scale.value > 1f
 
-
-    fun packTransform() = RigidTransform(scale.value, pivot.value.toAbsolutePivot(imageBounds), translation.value)
-
-
-    fun animateImageTransformTo(targetScale: Float, targetPivot: Offset, targetTranslation: Offset, onEnd: () -> Unit = {}) {
+    fun animateImageTransformTo(targetScale: Float, targetTranslation: Offset, onEnd: () -> Unit = {}) {
         scope.launch {
-            launch { pivot.animateTo(targetPivot, PreviewPageDefaults.tween()) }
             launch { scale.animateTo(targetScale, PreviewPageDefaults.tween()) }
             launch { translation.animateTo(targetTranslation, PreviewPageDefaults.tween()); onEnd.invoke() }
         }
     }
 
     fun animatePackedTransformTo(packed: RigidTransform) {
-        val (scale, pivot, translation) = packed
-        animateImageTransformTo(scale, pivot, translation)
+        val (scale, _, translation) = packed
+        animateImageTransformTo(scale, translation)
     }
 
     fun startDismiss() {
@@ -619,7 +616,7 @@ fun TransformableImage(
             scope.launch {
                 dismissProgress.animateTo(1f, PreviewPageDefaults.tween())
             }
-            animateImageTransformTo(scale, center, translation) {
+            animateImageTransformTo(scale, translation) {
                 onDismiss.invoke()
             }
         }
@@ -628,7 +625,6 @@ fun TransformableImage(
     fun reset() {
         scope.launch {
             scale.snapTo(1f)
-            pivot.snapTo(center)
             translation.snapTo(Offset.Zero)
         }
     }
@@ -665,17 +661,20 @@ fun TransformableImage(
                 detectZoomAndDrag(
                     detectVerticalOnly = { !isInZoom() },
                     onZoomGesture = { centroid, pan, zoom ->
+                        // centroid is always from last frame
 //                        log.d("double pointer zoom!")
                         scope.launch {
-                            val scaleValue = scale.value * zoom
-                            pivot.snapTo(centroid.pivotFractionIn(imageBounds, allowOob = false))
-                            scale.snapTo(
-                                scaleValue.coerceIn(
-                                    PreviewPageDefaults.scaleLimitMin,
-                                    PreviewPageDefaults.scaleLimitMax
-                                )
+                            val targetScale = (scale.value * zoom).coerceIn(
+                                PreviewPageDefaults.scaleLimitMin,
+                                PreviewPageDefaults.scaleLimitMax
                             )
-                            translation.snapTo(translation.value+pan)
+                            val scaleFactor = targetScale / scale.value
+                            val translationDelta = Offset(
+                                x = (1f - scaleFactor) * (centroid.x - imageBounds.left) + pan.x,
+                                y = (1f - scaleFactor) * (centroid.y - imageBounds.top) + pan.y
+                            )
+                            scale.snapTo(targetScale)
+                            translation.snapTo(translation.value + translationDelta)
                         }
                     },
                     onZoomStart = {
@@ -685,11 +684,12 @@ fun TransformableImage(
                     onZoomEnd = {
                         if (scale.value < 1f) {
                             onGestureStateUpdate(GestureState.IDLE)
-                            animateImageTransformTo(1f, center, Offset.Zero)
+                            animateImageTransformTo(1f, Offset.Zero)
                         } else if (scale.value > 1f) {
                             scope.launch {
                                 val translationFix = calculateTranslationFix(imageBounds, containerBounds)
-                                translation.animateTo(translation.value+translationFix, PreviewPageDefaults.spring())
+                                log.d("zoom end fix: $translationFix, $imageBounds")
+                                translation.animateTo(translation.value + translationFix, PreviewPageDefaults.tween())
                             }
                         }
                     },
@@ -711,7 +711,6 @@ fun TransformableImage(
                                 log.d("Not dismissing")
                                 animateImageTransformTo(
                                     targetScale = 1f,
-                                    targetPivot = center,
                                     targetTranslation = Offset.Zero
                                 )
                                 scope.launch {
@@ -741,18 +740,37 @@ fun TransformableImage(
                 detectTapGestures(onDoubleTap = { point ->
                     scope.coroutineContext.cancelChildren()
                     val scaleUp = scale.value < PreviewPageDefaults.doubleTapScale
-                    val targetTransform = packTransform().copy(
-                        pivot = point.pivotFractionIn(imageBounds, allowOob = false),
-                        scale = if (scaleUp) PreviewPageDefaults.doubleTapScale else 1f,
-                    ).let {
-                        val originalRect = imageBounds.inverseTransform(packTransform())
-                        val dstRectBeforeFix = originalRect.applyTransform(it.copy(pivot = it.pivot.toAbsolutePivot(imageBounds)))
-                        val translationFix = if (scaleUp) calculateTranslationFix(dstRectBeforeFix, containerBounds) else -translation.value
-                        it.copy(translation = it.translation + translationFix)
-//                        it
+                    if (scaleUp) {
+                        val originalRect = originalImageBounds
+                        val scaleFactor = PreviewPageDefaults.doubleTapScale / scale.value
+                        val translationAfterScale = -Offset(
+                            x = (scaleFactor - 1) * (point.x - imageBounds.left),
+                            y = (scaleFactor - 1) * (point.y - imageBounds.top)
+                        )
+                        RigidTransform(
+                            scale = PreviewPageDefaults.doubleTapScale,
+                            pivot = originalRect.topLeft,
+                            translation = translationAfterScale
+                        ).let {
+                            val dstRectBeforeFix = originalRect.applyTransform(it)
+                            val translationFix = calculateTranslationFix(dstRectBeforeFix, containerBounds)
+
+                            log.d("double tap translation $translationAfterScale fix $translationFix")
+
+                            animatePackedTransformTo(
+                                it.copy(
+                                    translation = translationAfterScale + translationFix
+                                )
+                            )
+                        }
+                    } else {
+                        animateImageTransformTo(
+                            targetScale = 1f,
+                            targetTranslation = Offset.Zero
+                        )
                     }
+
                     onGestureStateUpdate(if (scaleUp) GestureState.SCALING else GestureState.IDLE)
-                    animatePackedTransformTo(targetTransform)
                 })
             }
 
@@ -766,19 +784,23 @@ fun TransformableImage(
                 modifier = Modifier
                     .wrapContentSize()
                     .align(Alignment.Center)
+                    .onGloballyPositioned {
+                        originalImageBounds = it.boundsInParent()
+                    }
                     .graphicsLayer {
-//                        log.d("${scale.value}, ${pivot.value}, ${translation.value}")
+                        log.d("${scale.value}, ${translation.value}")
+                        transformOrigin = TransformOrigin(0f, 0f)
                         scaleX = scale.value
                         scaleY = scale.value
-                        transformOrigin = TransformOrigin(pivot.value.x, pivot.value.y)
                         translationX = translation.value.x
                         translationY = translation.value.y
                     }
                     .onGloballyPositioned { coord ->
                         with(coord) {
-                            if (center == Offset.Unspecified) center = Offset(size.width / 2f, size.height / 2f)
+//                            if (center == Offset.Unspecified) center = Offset(size.width / 2f, size.height / 2f)
                             imageBounds = coord.boundsInParent()
                             imageBoundsOnScreen = coord.boundsInWindow()
+                            log.i("$imageBounds")
                         }
                     }
             )

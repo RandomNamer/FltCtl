@@ -14,12 +14,12 @@ data class RigidTransform(
     val translation: Offset
 ) {
     companion object {
-        fun getTransform(src: Rect, dst: Rect): RigidTransform {
+        fun getTransform(src: Rect, dst: Rect, useTopLeftGravity: Boolean = true): RigidTransform {
             val scaleX = dst.width / src.width
             val scaleY = dst.height / src.height
             val scale = minOf(scaleX, scaleY)
 
-            val pivot = Offset(
+            val pivot = if (useTopLeftGravity) Offset(src.left, src.top) else Offset(
                 src.left + src.width / 2f,
                 src.top + src.height / 2f
             )
@@ -73,7 +73,7 @@ data class RigidTransform(
 
 }
 
-fun Rect.getTransformTo(dst: Rect): RigidTransform = RigidTransform.getTransform(this, dst)
+fun Rect.getTransformTo(dst: Rect): RigidTransform = RigidTransform.getTransform(this, dst, useTopLeftGravity = true)
 
 fun Rect.applyTransform(transform: RigidTransform) = transform.applyRect(this)
 

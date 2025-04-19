@@ -308,8 +308,18 @@ interface LogProxy {
     fun log(level: Int, tag: String, message: String)
 }
 
-object AndroidOnlyLogProxy: LogProxy {
-    override fun log(level: Int, tag: String, message: String) {
+abstract class ToggleableLogProxy: LogProxy {
+    var enabled = true
+
+    final override fun log(level: Int, tag: String, message: String) {
+        if (enabled) defaultLog(level, tag, message)
+    }
+
+    abstract fun defaultLog(level: Int, tag: String, message: String)
+}
+
+object AndroidOnlyLogProxy: ToggleableLogProxy() {
+    override fun defaultLog(level: Int, tag: String, message: String){
         when (level) {
             LogProxy.VERBOSE -> AndroidLog.v(tag, message)
             LogProxy.DEBUG -> AndroidLog.d(tag, message)
@@ -452,6 +462,10 @@ class Logger(
     private val tag: String,
     private val proxy: LogProxy = MmapLogProxy.getInstance()
 ) {
+    fun enable(value: Boolean): Boolean {
+        return (proxy as? ToggleableLogProxy)?.run { enabled = value; true; } ?: false
+    }
+
     fun v(message: String) = proxy.log(LogProxy.VERBOSE, tag, message)
     fun d(message: String) = proxy.log(LogProxy.DEBUG, tag, message)
     fun i(message: String) = proxy.log(LogProxy.INFO, tag, message)
