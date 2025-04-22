@@ -7,26 +7,14 @@ import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import com.example.fltctl.ui.BaseComposeActivity
 import com.example.fltctl.ui.home.HomeScreen
 import com.example.fltctl.ui.home.HomeViewModel
 import com.example.fltctl.utils.RuntimePermissionUtil
 import com.example.fltctl.utils.hasEnabledAccessibilityService
 import com.example.fltctl.utils.hasOverlaysPermission
-import com.example.fltctl.widgets.composable.simplyScrollable
 
 class MainActivity : BaseComposeActivity() {
 
@@ -46,8 +34,6 @@ class MainActivity : BaseComposeActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val crashMessage = remember { intent.getStringExtra(FloatingControlApp.CRASH_STACKTRACE_STR) }
-        var shouldShowCrashDialog by remember { mutableStateOf(intent.getBooleanExtra(FloatingControlApp.CRASH_RECOVER, false)) }
 
         HomeScreen(
             vm = vm,
@@ -61,29 +47,6 @@ class MainActivity : BaseComposeActivity() {
             }
         )
 
-        if (shouldShowCrashDialog && crashMessage != null) {
-            AlertDialog(
-                modifier = Modifier.fillMaxHeight(0.7f),
-                onDismissRequest = { shouldShowCrashDialog = false },
-                title = {
-                   Text("Crashed!")
-                },
-                text = {
-                    Box(Modifier.fillMaxSize()) {
-                        Box(Modifier.simplyScrollable()) {
-                            Text(crashMessage, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                },
-                confirmButton = {
-                    androidx.compose.material3.Button(onClick = {
-                        shouldShowCrashDialog = false
-                    }) {
-                        Text("OK")
-                    }
-                }
-            )
-        }
     }
 
     private fun requestOverlaysPermission() {

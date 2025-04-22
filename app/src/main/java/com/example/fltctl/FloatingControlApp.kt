@@ -6,18 +6,20 @@ import android.app.AlarmManager
 import android.app.Application
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Context.ALARM_SERVICE
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
-import android.view.View
+import androidx.annotation.MainThread
 import com.example.fltctl.configs.SettingsCache
-import com.example.fltctl.controls.service.appaware.appTriggerSharedScope
 import com.example.fltctl.tests.TestEntry
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.tests.ViewBasedTestsContainerActivity
+import com.example.fltctl.tests.compose.AfterCrash
+import com.example.fltctl.tests.compose.CrashInfo
 import com.example.fltctl.utils.LogProxy
 import com.example.fltctl.utils.MmapLogProxy
-import com.example.fltctl.utils.stackTraceAsString
+import com.example.fltctl.utils.deepStackTraceToString
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,12 +38,19 @@ class FloatingControlApp: Application() {
     }
     override fun onCreate() {
         super.onCreate()
-        AppMonitor.onAppCreate(this)
+        AppMonitorImpl.onAppCreate(this)
         MmapLogProxy.initialize(this)
         MmapLogProxy.getInstance().log(LogProxy.INFO, TAG, "onCreate")
         SettingsCache.init(this)
         Thread.setDefaultUncaughtExceptionHandler { t, e ->
-            val stacktraceString = e.stackTraceAsString()
+            val stacktraceString = e.deepStackTraceToString()
+            val crashInfo = CrashInfo(
+                title = "Uncaught exception at thread ${t.name}",
+                message = e.message.toString(),
+                time = System.currentTimeMillis(),
+                stacktraceString = stacktraceString
+            )
+
             MmapLogProxy.getInstance().run {
                 logSync(LogProxy.ERROR, TAG, "Thread ${t.name} crashed: ${e.message}")
                 logSync(LogProxy.ERROR, TAG, "Stacktrace:")
@@ -50,18 +59,7 @@ class FloatingControlApp: Application() {
                 }
                 flush()
             }
-            val relaunchIntent = PendingIntent.getActivity(
-                applicationContext,
-                0,
-                Intent(applicationContext, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
-                    putExtra(CRASH_RECOVER, true)
-                    putExtra(CRASH_STACKTRACE_STR, stacktraceString)
-                },
-                PendingIntent.FLAG_IMMUTABLE
-            )
-            (getSystemService(ALARM_SERVICE) as AlarmManager).set(AlarmManager.RTC, System.currentTimeMillis(), relaunchIntent)
-            exitProcess(10)
+            launchCrashScreen(crashInfo)
         }
     }
 
@@ -74,6 +72,18 @@ class FloatingControlApp: Application() {
         super.onTerminate()
         MmapLogProxy.getInstance().flush()
     }
+
+    @MainThread
+    private fun launchCrashScreen(info: CrashInfo) {
+        AppMonitorImpl.topActivity?.run {
+            ViewBasedTestsContainerActivity.launch(this, AfterCrash::class) {
+                it.putExtra(CRASH_RECOVER, info)
+            }
+            finish()
+        }
+        android.os.Process.killProcess(android.os.Process.myPid())
+        exitProcess(10)
+    }
 }
 
 interface AppBackgroundListener {
@@ -83,16 +93,19 @@ interface AppBackgroundListener {
 
 interface IAppMonitorService {
     val appContext: Context
-    val topActivity: WeakReference<Activity>
+    val topActivity: Activity?
     fun addListener(l: AppBackgroundListener)
     fun removeListener(l: AppBackgroundListener)
     fun addStartupTestPage(test: UiTest)
+    fun restartApplication()
 }
 
-@SuppressLint("StaticFieldLeak")
-object AppMonitor: IAppMonitorService {
+val AppMonitor: IAppMonitorService
+    get() = AppMonitorImpl as IAppMonitorService
 
-    @JvmStatic
+@SuppressLint("StaticFieldLeak")
+private object AppMonitorImpl: IAppMonitorService {
+
     private var applicationRef = WeakReference<Application>(null)
 
     override val appContext: Context
@@ -107,21 +120,29 @@ object AppMonitor: IAppMonitorService {
     private val mainThreadScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     private val activityLifecycleCallbacks = object: Application.ActivityLifecycleCallbacks {
+
+        override fun onActivityPreCreated(activity: Activity, savedInstanceState: Bundle?) {
+            activityBeforeCreateTasks.removeAll {
+                it.invoke(activity)
+                true
+            }
+        }
+
         override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-            synchronized(this@AppMonitor) {
+            synchronized(this@AppMonitorImpl) {
                 aliveActivities.remove(activity)
                 aliveActivities.add(activity)
             }
         }
 
         override fun onActivityStarted(activity: Activity) {
-            synchronized(this@AppMonitor) {
+            synchronized(this@AppMonitorImpl) {
                 startedActivities.add(activity)
             }
         }
 
         override fun onActivityResumed(activity: Activity) {
-            synchronized(this@AppMonitor) {
+            synchronized(this@AppMonitorImpl) {
                 if (!isInForeground) listeners.forEach { it.onAppForeground() }
                 isInForeground = true
                 if (!coldStarted && _topActivity.get() == null) {
@@ -135,7 +156,7 @@ object AppMonitor: IAppMonitorService {
         }
 
         override fun onActivityStopped(activity: Activity) {
-            synchronized(this@AppMonitor) {
+            synchronized(this@AppMonitorImpl) {
                 startedActivities.remove(activity)
                 if (isInForeground && startedActivities.isEmpty()) {
                     listeners.forEach { it.onAppBackground() }
@@ -149,7 +170,7 @@ object AppMonitor: IAppMonitorService {
         }
 
         override fun onActivityDestroyed(activity: Activity) {
-            synchronized(this@AppMonitor) {
+            synchronized(this@AppMonitorImpl) {
                 aliveActivities.remove(activity)
                 aliveActivities.add(activity)
             }
@@ -157,20 +178,18 @@ object AppMonitor: IAppMonitorService {
 
     }
 
-    @JvmStatic
-    private val aliveActivities = mutableListOf<Activity>()
+    internal val aliveActivities = mutableListOf<Activity>()
 
-    @JvmStatic
     private val startedActivities = mutableListOf<Activity>()
 
-    override val topActivity:WeakReference<Activity>
-        get() = _topActivity
+    override val topActivity: Activity?
+        get() = _topActivity.get()
 
-    @JvmStatic
     private var _topActivity: WeakReference<Activity> = WeakReference(null)
 
-    @JvmStatic
     private var isInForeground = false
+
+    private val activityBeforeCreateTasks = mutableListOf<(Activity) -> Unit>()
 
     private fun onColdStartComplete() {
         coldStarted = true
@@ -186,8 +205,12 @@ object AppMonitor: IAppMonitorService {
         }
     }
 
+    fun runBeforeNextActivityLaunch(r: (activity: Activity) -> Unit) {
+        activityBeforeCreateTasks.add(r)
+    }
 
-    internal fun onAppCreate(inst: Application) {
+
+    fun onAppCreate(inst: Application) {
         inst.registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
         applicationRef = WeakReference(inst)
     }
@@ -201,6 +224,21 @@ object AppMonitor: IAppMonitorService {
     }
 
     override fun addStartupTestPage(test: UiTest) {
-        appStartupTest = test
+        if (BuildConfig.DEBUG) {
+            appStartupTest = test
+        }
+    }
+
+    override fun restartApplication() {
+        val relaunchIntent = PendingIntent.getActivity(
+            appContext,
+            0,
+            Intent(appContext, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        (appContext.getSystemService(ALARM_SERVICE) as AlarmManager).set(AlarmManager.RTC, System.currentTimeMillis(), relaunchIntent)
+        exitProcess(10)
     }
 }

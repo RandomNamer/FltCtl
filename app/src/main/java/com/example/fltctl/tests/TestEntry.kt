@@ -5,8 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.fltctl.tests.compose.albumtest.albumPreviewUiTest
+import com.example.fltctl.tests.compose.flingTest
+import com.example.fltctl.tests.controls.CrashTest
 import com.example.fltctl.tests.controls.FloatingControlIntegrationTest
 import com.example.fltctl.tests.controls.LogViewer
 import com.example.fltctl.tests.views.textViewEllipsizeTest
@@ -48,7 +49,8 @@ object TestEntry {
         albumPreviewUiTest,
         LogViewer(),
         textViewEllipsizeTest,
-        CrashTest()
+        CrashTest(),
+        flingTest
     )
 
     private val debugOnly = mutableSetOf<UiTest>(
@@ -82,23 +84,24 @@ object TestEntry {
                             Modifier
                                 .padding(innerPadding)
                                 .padding(horizontal = 10.dp)
+                                .padding(bottom = 10.dp)
                                 .fillMaxWidth()
-                                .scrollable(listScrollState, Orientation.Vertical)
+                                .verticalScroll(listScrollState)
                         ) {
                             tests.forEach { uiTest ->
                                 Spacer(Modifier.height(10.dp))
                                 EInkCompatCard(LocalEInkMode.current, Modifier.clickable {
                                     enterTest(this@TestEntryListActivity, uiTest)
-                                }) {
+                                }) { pv ->
                                     Column(Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 14.dp)) {
+                                        .padding(pv)) {
                                         Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                             Text(uiTest.title, Modifier.weight(2f), style = MaterialTheme.typography.titleLarge)
                                             AssistChip(onClick = {}, label = {
                                                 Text(
                                                     when (uiTest) {
-                                                        is UiTest.ComposeUiTest -> "Compose"
+                                                        is UiTest.ComposeUiTest, is UiTest.ComposeUiTestWrap -> "Compose"
                                                         is UiTest.XmlUiTest -> "XML"
                                                         is UiTest.ViewProviderUiTest -> "ViewProvider"
                                                         is UiTest.FltCtlUiTest -> "FltCtl"

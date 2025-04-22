@@ -18,9 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.PrintWriter
 import java.io.RandomAccessFile
-import java.io.StringWriter
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.text.SimpleDateFormat
@@ -497,8 +495,35 @@ fun track(name: String, payload: () -> Unit) {
     trackLogger.d("$name: Duration $time ms.")
 }
 
-fun Throwable.stackTraceAsString(): String {
-    val stringWriter = StringWriter()
-    printStackTrace(PrintWriter(stringWriter))
-    return stringWriter.toString()
+fun Throwable.deepStackTraceToString(): String {
+    val sb = StringBuilder()
+    var current: Throwable? = this
+    var counter = 0
+
+    while (current != null) {
+        if (counter > 0) {
+            sb.append("\nCaused by: ")
+        }
+
+        sb.append(current.toString())
+
+        // Append stack trace elements
+        for (element in current.stackTrace) {
+            sb.append("\n    at ")
+            sb.append(element.toString())
+        }
+
+        // Move to the cause
+        current = current.cause
+
+        // Avoid infinite loops if there's a circular reference
+        if (current === this) {
+            sb.append("\nCaused by: [CIRCULAR REFERENCE]")
+            break
+        }
+
+        counter++
+    }
+
+    return sb.toString()
 }

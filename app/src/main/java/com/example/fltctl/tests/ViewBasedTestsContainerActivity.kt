@@ -21,6 +21,7 @@ import androidx.compose.ui.util.fastForEachIndexed
 import com.example.fltctl.controls.arch.FloatingControl
 import com.example.fltctl.controls.arch.FloatingControlInfo
 import com.example.fltctl.ui.toast
+import kotlin.reflect.KClass
 
 /**
  * We dont like fragments. For complex UI, compose is sufficient for SAA.
@@ -52,6 +53,8 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
         private const val TRANSACTION_OBJ_COMMON = "TRANSACTION_OBJ_ORIGINAL_OBJ"
         private const val TRANSACTION_OBJ_VIEW_CREATOR = "TRANSACTION_OBJ_VIEW_CREATOR"
 
+        private const val LAUNCH_CLASSNAME = "OBJ_CLASSNAME"
+
         fun <V> MutableMap<String, Any>.getAndRemove(key: String): V? = (get(key) as? V)?.also { if (!PERSIST_WHEN_CONFIG_CHANGE) remove(key) }
 
         @JvmStatic
@@ -63,7 +66,8 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
         }
 
         @JvmStatic
-        fun launch(context: Context, test: UiTest) {
+        @JvmOverloads
+        fun launch(context: Context, test: UiTest, intentTransform: ((Intent) -> Unit)? = null) {
             val intent = Intent(context, ViewBasedTestsContainerActivity::class.java).apply {
                 putExtra(EXTRA_TITLE, test.title)
                 putExtra(EXTRA_DESC, test.description)
@@ -77,7 +81,8 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
                     intent.putExtra(EXTRA_LAUNCH_MODE, LAUNCH_MODE_FLTCTL)
                 }
 
-                is UiTest.ComposeUiTest -> {
+                is UiTest.ComposeUiTest,
+                is UiTest.ComposeUiTestWrap -> {
                     transactionObjStore.put(TRANSACTION_OBJ_COMPOSE, test)
                     intent.putExtra(EXTRA_LAUNCH_MODE, LAUNCH_MODE_COMPOSE)
                 }
@@ -90,7 +95,15 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
                     intent.putExtra(EXTRA_LAYOUT_ID, test.layoutId)
                 }
             }
+            intentTransform?.invoke(intent)
             context.startActivity(intent)
+        }
+
+        fun launch(context: Context, testClz: KClass<out UiTest>, intentTransform: ((Intent) -> Unit)? = null) {
+            launch(context, testClz.java.newInstance()) {
+                intentTransform?.invoke(it)
+                it.putExtra(LAUNCH_CLASSNAME, testClz.java.name)
+            }
         }
     }
 
@@ -103,6 +116,9 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
     private val menuItems = mutableListOf<SimpleMenuItem>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        intent.getStringExtra(LAUNCH_CLASSNAME)?.let {
+            transactionObjStore.put(TRANSACTION_OBJ_COMMON, Class.forName(it).newInstance())
+        }
         transactionObjStore.getAndRemove<UiTest>(TRANSACTION_OBJ_COMMON)?.run {
             onActivityCreate(this@ViewBasedTestsContainerActivity)
             menuItems.clear()
@@ -200,7 +216,12 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
     }
 
     private fun initCompose(container: FrameLayout) {
-        val composeUiTest = transactionObjStore.getAndRemove<UiTest.ComposeUiTest>(TRANSACTION_OBJ_COMPOSE)
+        val composeUiTest = transactionObjStore.getAndRemove<UiTest.ComposeUiTest>(TRANSACTION_OBJ_COMPOSE) ?: run {
+            intent.getStringExtra(LAUNCH_CLASSNAME)?.let {
+                val clz = Class.forName(it)
+                (clz.newInstance() as? UiTest.ComposeUiTestWrap)?.data
+            }
+        }
         container.addView(ComposeView(this).apply {
             layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
             setContent {

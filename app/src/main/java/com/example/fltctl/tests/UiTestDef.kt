@@ -50,6 +50,22 @@ sealed interface UiTest {
         }
     }
 
+    // Reflect support
+    abstract class ComposeUiTestWrap: UiTest {
+
+        abstract val data: ComposeUiTest
+
+        override val title: String
+            get() = data.title
+        override val description: String
+            get() = data.description
+
+        override fun onActivityCreate(activity: AppCompatActivity) {
+            activity.setTheme(R.style.Theme_FltCtl)
+        }
+
+    }
+
 
     data class ViewProviderUiTest(
         override val title: String, override val description: String = "",

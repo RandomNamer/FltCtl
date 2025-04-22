@@ -117,7 +117,7 @@ internal val log by androidLogs("AlbumTest")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BoxScope.Album() {
-    log.enable(false)
+    log.enable(true)
     val viewModel: MediaPickerViewModel = viewModel()
     val state = viewModel.state
     val scope = rememberCoroutineScope()
@@ -799,6 +799,7 @@ fun TransformableImage(
                     .align(Alignment.Center)
                     .onGloballyPositioned {
                         originalImageBounds = it.boundsInParent()
+                        log.d("original: $originalImageBounds")
                     }
                     .graphicsLayer {
                         log.d("${scale.value}, ${translation.value}")
@@ -811,9 +812,13 @@ fun TransformableImage(
                     .onGloballyPositioned { coord ->
                         with(coord) {
 //                            if (center == Offset.Unspecified) center = Offset(size.width / 2f, size.height / 2f)
-                            imageBounds = coord.boundsInParent()
+                            imageBounds = originalImageBounds.applyTransform(RigidTransform(
+                                scale = scale.value,
+                                pivot = originalImageBounds.topLeft,
+                                translation = translation.value
+                            ))
                             imageBoundsOnScreen = coord.boundsInWindow()
-                            log.i("$imageBounds")
+                            log.i("after: $imageBounds")
                         }
                     }
             )

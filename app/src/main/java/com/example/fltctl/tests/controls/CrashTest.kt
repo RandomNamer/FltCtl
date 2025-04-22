@@ -1,15 +1,15 @@
-package com.example.fltctl.tests
+package com.example.fltctl.tests.controls
 
 import android.app.Activity
 import android.content.Context
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup.LayoutParams.MATCH_PARENT
-import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.example.fltctl.controls.arch.FloatingControlInfo
+import com.example.fltctl.tests.UiTest
 import com.example.fltctl.utils.chance
 
 /**
@@ -40,10 +40,10 @@ class CrashTest: UiTest.FltCtlUiTest() {
             (context as Activity)!!::class.java.getDeclaredMethod("getSharedPrefsFile").invoke(context, "/data/114514.xml")
         }
         return FrameLayout(context).apply {
-            layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             addView(Button(context).apply {
                 text = "crash it"
-                layoutParams = FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+                layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     gravity = Gravity.CENTER
                 }
                 setOnClickListener {

@@ -4,7 +4,9 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -71,3 +73,13 @@ fun Modifier.simplyScrollable(): Modifier = composed {
     val hss = rememberScrollState()
     return@composed this.verticalScroll(vss).horizontalScroll(hss)
 }
+
+private const val ROUNDEDCORNER_PADDING_FRAC = 0.75f
+
+@Composable
+fun CornerBasedShape.recommendedPadding(): PaddingValues = PaddingValues(
+    start = max(topStart .toDp(), bottomStart.toDp()) * ROUNDEDCORNER_PADDING_FRAC,
+    top = max(topStart.toDp(), topEnd.toDp()) * ROUNDEDCORNER_PADDING_FRAC,
+    end = max(topEnd.toDp(), bottomEnd.toDp()) * ROUNDEDCORNER_PADDING_FRAC,
+    bottom = max(bottomStart.toDp(), bottomEnd.toDp()) * ROUNDEDCORNER_PADDING_FRAC
+)

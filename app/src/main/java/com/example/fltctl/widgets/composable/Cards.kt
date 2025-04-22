@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -62,7 +63,7 @@ fun EInkCompatCard(
     shadowElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     tonalElevation: Dp = 4.dp,
     border: BorderStroke? = null,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.(PaddingValues) -> Unit
 ) {
     val outlineColor = MaterialTheme.colorScheme.onBackground
     if (isInEInkMode) modifier.background(Color.White)
@@ -74,7 +75,9 @@ fun EInkCompatCard(
         border = if (isInEInkMode) BorderStroke(2.dp, outlineColor) else border,
     ) {
         Surface(Modifier.wrapContentSize(), tonalElevation = if (isInEInkMode) 0.dp else tonalElevation) {
-            Column(content=content)
+            Column(Modifier.fillMaxWidth()) {
+                content((shape as? RoundedCornerShape)?.recommendedPadding() ?: PaddingValues(0.dp))
+            }
         }
     }
 }
