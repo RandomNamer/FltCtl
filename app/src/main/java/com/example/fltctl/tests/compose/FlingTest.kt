@@ -70,8 +70,10 @@ fun FlingScreen() {
     var frictionMultiplier by remember { mutableFloatStateOf(1f) }
     val density = LocalDensity.current
     var sliderWidth by remember { mutableStateOf(IntSize.Zero) }
-    val list = List(1000) {
-        LoremIpsum(globalRandom.nextInt(3, 20)).values.first()
+    val list = remember {
+        List(1000) {
+            LoremIpsum(globalRandom.nextInt(3, 20)).values.first()
+        }
     }
 
     // Calculate frictionMultiplier based on sliderPosition

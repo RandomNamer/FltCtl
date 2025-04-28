@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.fltctl.tests.compose.albumtest.albumPreviewUiTest
+import com.example.fltctl.tests.compose.androidPipTest
 import com.example.fltctl.tests.compose.flingTest
 import com.example.fltctl.tests.controls.CrashTest
 import com.example.fltctl.tests.controls.FloatingControlIntegrationTest
@@ -49,8 +50,9 @@ object TestEntry {
         albumPreviewUiTest,
         LogViewer(),
         textViewEllipsizeTest,
+        flingTest,
+        androidPipTest,
         CrashTest(),
-        flingTest
     )
 
     private val debugOnly = mutableSetOf<UiTest>(

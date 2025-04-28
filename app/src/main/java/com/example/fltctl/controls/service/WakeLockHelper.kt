@@ -73,7 +73,7 @@ class WakeLockHelper(private val context: Context): WakeLockActions {
     private fun acquireWakeLockByChangeSettings(timeout: Long): Boolean {
         if (timeout > 10000L) {
             val curSettingValue = getScreenTimeout()
-            if (curSettingValue > 0L && curSettingValue != lastRequestedTimeout) {
+            if (curSettingValue > 0L && curSettingValue != lastRequestedTimeout && curSettingValue < INDEFINITE_TIMEOUT)  {
                 originalScreenTimeout = curSettingValue
                 lastRequestedTimeout = timeout
                 return modifyScreenTimeout(INDEFINITE_TIMEOUT)

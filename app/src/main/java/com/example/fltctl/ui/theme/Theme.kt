@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.ViewCompat
+import com.example.fltctl.configs.SettingKeys
+import com.example.fltctl.configs.SettingsCache
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -71,17 +73,17 @@ fun FltCtlTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
-    eInkTheme: Boolean = false,
+    eInkTheme: Boolean = SettingsCache[SettingKeys.UI_EINK_MODE] ?: false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     val colorScheme = when {
-        eInkTheme -> eInkColorScheme
+        eInkTheme -> eInkColorScheme.copy()
         !eInkTheme && dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> DarkColorScheme.copy()
+        else -> LightColorScheme.copy()
     }
     val view = LocalView.current
     if (!view.isInEditMode) {

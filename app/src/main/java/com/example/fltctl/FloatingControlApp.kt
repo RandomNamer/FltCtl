@@ -11,15 +11,19 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import androidx.annotation.MainThread
+import com.example.fltctl.appselection.ui.AppSelectActivity
 import com.example.fltctl.configs.SettingsCache
 import com.example.fltctl.tests.TestEntry
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.tests.ViewBasedTestsContainerActivity
 import com.example.fltctl.tests.compose.AfterCrash
 import com.example.fltctl.tests.compose.CrashInfo
+import com.example.fltctl.ui.toast
 import com.example.fltctl.utils.LogProxy
 import com.example.fltctl.utils.MmapLogProxy
 import com.example.fltctl.utils.deepStackTraceToString
+import com.example.fltctl.utils.isLauncher
+import com.example.fltctl.utils.logs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,13 +33,14 @@ import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArraySet
 import kotlin.system.exitProcess
 
-class FloatingControlApp: Application() {
+class FloatingControlApp : Application() {
 
     companion object {
         const val TAG = "Application"
         const val CRASH_RECOVER = "crash_recover"
         const val CRASH_STACKTRACE_STR = "crash_stacktrace"
     }
+
     override fun onCreate() {
         super.onCreate()
         AppMonitorImpl.onAppCreate(this)
@@ -59,6 +64,7 @@ class FloatingControlApp: Application() {
                 }
                 flush()
             }
+            e.printStackTrace()
             launchCrashScreen(crashInfo)
         }
     }
@@ -69,8 +75,8 @@ class FloatingControlApp: Application() {
     }
 
     override fun onTerminate() {
-        super.onTerminate()
         MmapLogProxy.getInstance().flush()
+        super.onTerminate()
     }
 
     @MainThread
@@ -79,7 +85,6 @@ class FloatingControlApp: Application() {
             ViewBasedTestsContainerActivity.launch(this, AfterCrash::class) {
                 it.putExtra(CRASH_RECOVER, info)
             }
-            finish()
         }
         android.os.Process.killProcess(android.os.Process.myPid())
         exitProcess(10)
@@ -104,7 +109,9 @@ val AppMonitor: IAppMonitorService
     get() = AppMonitorImpl as IAppMonitorService
 
 @SuppressLint("StaticFieldLeak")
-private object AppMonitorImpl: IAppMonitorService {
+private object AppMonitorImpl : IAppMonitorService {
+
+    private val log by logs("AppMonitorImpl")
 
     private var applicationRef = WeakReference<Application>(null)
 
@@ -119,9 +126,19 @@ private object AppMonitorImpl: IAppMonitorService {
 
     private val mainThreadScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    private val activityLifecycleCallbacks = object: Application.ActivityLifecycleCallbacks {
+    private var isCrashScreenLaunch = false
+        set(value) {
+            if (!coldStarted) field = value
+        }
+
+    private val alarmManager by lazy { appContext.getSystemService(ALARM_SERVICE) as AlarmManager }
+
+    private val pm by lazy { appContext.packageManager }
+
+    private val activityLifecycleCallbacks = object : Application.ActivityLifecycleCallbacks {
 
         override fun onActivityPreCreated(activity: Activity, savedInstanceState: Bundle?) {
+//            if (!coldStarted) isCrashScreenLaunch = activity.intent?.hasExtra(FloatingControlApp.CRASH_RECOVER) == true
             activityBeforeCreateTasks.removeAll {
                 it.invoke(activity)
                 true
@@ -172,7 +189,6 @@ private object AppMonitorImpl: IAppMonitorService {
         override fun onActivityDestroyed(activity: Activity) {
             synchronized(this@AppMonitorImpl) {
                 aliveActivities.remove(activity)
-                aliveActivities.add(activity)
             }
         }
 
@@ -192,23 +208,54 @@ private object AppMonitorImpl: IAppMonitorService {
     private val activityBeforeCreateTasks = mutableListOf<(Activity) -> Unit>()
 
     private fun onColdStartComplete() {
+        val firstActivity = aliveActivities.first()
+        val isEligibleLaunch = isEligibleLaunch(firstActivity)
+        log.i("Cold start complete: isCrashScreenLaunch = $isCrashScreenLaunch, topActivity = ${firstActivity}, isEligibleLaunch = $isEligibleLaunch")
         coldStarted = true
-        TestEntry
-        mainThreadScope.launch {
-            delay(500L)
-            appStartupTest?.let {
-                _topActivity.get()?.let { act ->
-                    ViewBasedTestsContainerActivity.launch(act, it)
-                }
+        if (isCrashScreenLaunch) return
+        alarmManager.cancel(buildRelaunchPendingIntent())
+        if (!isEligibleLaunch) {
+            with(firstActivity) {
+                startActivity(Intent(this, MainActivity::class.java))
+                toast("Illegal Launch")
+                finish()
             }
-            appStartupTest = null
+        } else {
+            TestEntry
+            mainThreadScope.launch {
+                delay(500L)
+                appStartupTest?.let {
+                    _topActivity.get()?.let { act ->
+                        ViewBasedTestsContainerActivity.launch(act, it)
+                    }
+                }
+                appStartupTest = null
+            }
+        }
+
+    }
+
+    private fun isEligibleLaunch(firstActivity: Activity): Boolean = when (firstActivity) {
+        is MainActivity -> true //stateless
+        is TestEntry.TestEntryListActivity -> {
+            BuildConfig.DEBUG
+        }
+
+        is AppSelectActivity -> {
+            firstActivity.callingPackage?.let {
+                isLauncher(pm, it)
+            } == true || AppSelectActivity.validateExternalIntent(firstActivity.intent) != null
+        }
+
+        else -> {
+            isCrashScreenLaunch = firstActivity.intent?.extras?.containsKey(FloatingControlApp.CRASH_RECOVER) == true
+            firstActivity.isInPictureInPictureMode == true
         }
     }
 
     fun runBeforeNextActivityLaunch(r: (activity: Activity) -> Unit) {
         activityBeforeCreateTasks.add(r)
     }
-
 
     fun onAppCreate(inst: Application) {
         inst.registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
@@ -230,15 +277,18 @@ private object AppMonitorImpl: IAppMonitorService {
     }
 
     override fun restartApplication() {
-        val relaunchIntent = PendingIntent.getActivity(
-            appContext,
-            0,
-            Intent(appContext, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
-            },
-            PendingIntent.FLAG_IMMUTABLE
-        )
-        (appContext.getSystemService(ALARM_SERVICE) as AlarmManager).set(AlarmManager.RTC, System.currentTimeMillis(), relaunchIntent)
-        exitProcess(10)
+        val relaunchIntent = buildRelaunchPendingIntent()
+        alarmManager.set(AlarmManager.RTC, System.currentTimeMillis() + 500L, relaunchIntent)
+//        android.os.Process.killProcess(android.os.Process.myPid())
+        exitProcess(0)
     }
+
+    private fun buildRelaunchPendingIntent() = PendingIntent.getActivity(
+        appContext,
+        0,
+        Intent(appContext, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        PendingIntent.FLAG_IMMUTABLE
+    )
 }

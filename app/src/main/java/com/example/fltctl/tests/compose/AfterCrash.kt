@@ -5,14 +5,15 @@ import android.os.Parcelable
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.annotation.Keep
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.example.fltctl.AppMonitor
@@ -54,10 +54,10 @@ private val afterCrash = UiTest.ComposeUiTest(
     fullscreen = true
 )
 
+@Keep
 class AfterCrash: UiTest.ComposeUiTestWrap() {
     override val data: UiTest.ComposeUiTest
         get() = afterCrash
-
 }
 
 @Parcelize
@@ -74,7 +74,6 @@ fun AfterCrashScreen() {
 
     val crashInfo = LocalActivity.current?.intent?.getParcelableExtra<CrashInfo>(FloatingControlApp.CRASH_RECOVER)
     val onBackPressedDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
-    val context = LocalContext.current
     val scrollBarBehaviour = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val backPressInterceptor = remember {
         object: OnBackPressedCallback(true) {
@@ -116,18 +115,20 @@ fun AfterCrashScreen() {
                 .fillMaxSize()
                 .padding(12.dp)) {
 
-                Text(text="Crashed at ${crashInfo?.time?.asLocaleTimeString()}: ${crashInfo?.message}", style = MaterialTheme.typography.labelMedium)
-                Text(text="Device: ${Build.MODEL} (API ${Build.VERSION.SDK_INT})", style = MaterialTheme.typography.labelMedium)
-                Text(text="Stacktrace:", style = MaterialTheme.typography.titleMedium)
-                Box(Modifier
+                Text(text="Crashed at ${crashInfo?.time?.asLocaleTimeString()}: ${crashInfo?.message}", style = MaterialTheme.typography.bodySmall)
+                Text(text="Device: ${Build.MODEL} (API ${Build.VERSION.SDK_INT})", style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(16.dp))
+                Column(Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .clip(RoundedCornerShape(16.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerLowest)
                     .padding(8.dp)) {
+                    Text(text="Stacktrace", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
                     Text(
                         text = crashInfo?.stacktraceString?: "",
-                        modifier = Modifier.simplyScrollable()
+                        modifier = Modifier.simplyScrollable(),
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 Row(Modifier

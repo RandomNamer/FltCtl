@@ -39,7 +39,7 @@ fun TwoLineTopAppBar(
             Column {
                 title()
                 AnimatedVisibility(scrollBehavior.state.collapsedFraction < 0.5) {
-                    ProvideTextStyle(MaterialTheme.typography.titleMedium) {
+                    ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
                         subTitle()
                     }
                 }

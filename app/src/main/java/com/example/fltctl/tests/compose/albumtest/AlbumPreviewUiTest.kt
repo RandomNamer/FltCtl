@@ -83,7 +83,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.fltctl.AppMonitor
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.ui.theme.FltCtlTheme
 import com.example.fltctl.utils.androidLogs
@@ -109,7 +108,7 @@ val albumPreviewUiTest = UiTest.ComposeUiTest(
         }
     }
 ).also {
-    AppMonitor.addStartupTestPage(it)
+//    AppMonitor.addStartupTestPage(it)
 }
 
 internal val log by androidLogs("AlbumTest")
@@ -117,7 +116,7 @@ internal val log by androidLogs("AlbumTest")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BoxScope.Album() {
-    log.enable(true)
+    log.enable(false)
     val viewModel: MediaPickerViewModel = viewModel()
     val state = viewModel.state
     val scope = rememberCoroutineScope()
@@ -584,7 +583,7 @@ fun TransformableImage(
     var translation = remember { Animatable(Offset.Zero, Offset.VectorConverter)}
     var dismissProgress = remember { Animatable(0f) }
 
-    var imageBounds = Rect.Zero
+    var imageBounds = remember { Rect.Zero }
 
     var originalImageBounds = Rect.Zero
 
@@ -668,7 +667,7 @@ fun TransformableImage(
                     if (containerBounds == Rect.Zero) containerBounds = Rect(Offset.Zero, size.toSize())
                 }
             }
-            .pointerInput(Unit) {
+            .pointerInput(srcRect) {
 //                detectVerticalDragGestures { change, dragAmount ->  }
 
                 detectZoomAndDrag(
@@ -812,11 +811,12 @@ fun TransformableImage(
                     .onGloballyPositioned { coord ->
                         with(coord) {
 //                            if (center == Offset.Unspecified) center = Offset(size.width / 2f, size.height / 2f)
-                            imageBounds = originalImageBounds.applyTransform(RigidTransform(
-                                scale = scale.value,
-                                pivot = originalImageBounds.topLeft,
-                                translation = translation.value
-                            ))
+//                            imageBounds = originalImageBounds.applyTransform(RigidTransform(
+//                                scale = scale.value,
+//                                pivot = originalImageBounds.topLeft,
+//                                translation = translation.value
+//                            ))
+                            imageBounds = coord.boundsInParent()
                             imageBoundsOnScreen = coord.boundsInWindow()
                             log.i("after: $imageBounds")
                         }

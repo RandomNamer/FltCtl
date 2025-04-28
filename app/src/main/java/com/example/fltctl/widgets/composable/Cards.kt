@@ -56,7 +56,7 @@ import com.example.fltctl.R
 
 @Composable
 fun EInkCompatCard(
-    isInEInkMode: Boolean,
+    isInEInkMode: Boolean = com.example.fltctl.ui.theme.isInEInkMode,
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(20.dp),
     colors: CardColors = CardDefaults.elevatedCardColors(),
