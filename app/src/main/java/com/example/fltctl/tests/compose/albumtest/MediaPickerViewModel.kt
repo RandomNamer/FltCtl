@@ -47,6 +47,11 @@ data class UiTabItem(
 class MediaPickerViewModel(): ViewModel() {
     private val tabs = listOf(
         TabItem(
+            text = "System Album",
+            type = ImageRepository.Type.SYSTEM_ALBUM,
+            repository = ImageRepository.create(ImageRepository.Type.SYSTEM_ALBUM)
+        ),
+        TabItem(
             text = "Color Images",
             type = ImageRepository.Type.COLOR,
             repository = ImageRepository.create(ImageRepository.Type.COLOR)
@@ -61,11 +66,6 @@ class MediaPickerViewModel(): ViewModel() {
             type = ImageRepository.Type.CHECKERBORAD,
             repository = ImageRepository.create(ImageRepository.Type.CHECKERBORAD)
         ),
-        TabItem(
-            text = "System Album",
-            type = ImageRepository.Type.SYSTEM_ALBUM,
-            repository = ImageRepository.create(ImageRepository.Type.SYSTEM_ALBUM)
-        )
     )
     
     var state by mutableStateOf(MediaPickerState(tabs = tabs.map { it.toUiItem() }))

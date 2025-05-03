@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -70,7 +69,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -80,9 +82,12 @@ import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.fltctl.AppMonitor
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.ui.theme.FltCtlTheme
 import com.example.fltctl.utils.androidLogs
@@ -108,7 +113,7 @@ val albumPreviewUiTest = UiTest.ComposeUiTest(
         }
     }
 ).also {
-//    AppMonitor.addStartupTestPage(it)
+    AppMonitor.addStartupTestPage(it)
 }
 
 internal val log by androidLogs("AlbumTest")
@@ -116,7 +121,7 @@ internal val log by androidLogs("AlbumTest")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BoxScope.Album() {
-    log.enable(false)
+    log.enable(true)
     val viewModel: MediaPickerViewModel = viewModel()
     val state = viewModel.state
     val scope = rememberCoroutineScope()
@@ -222,9 +227,15 @@ fun ImageGrid(
         } else if (errorMsg != null) {
             EInkCompatCard(
                 isInEInkMode = false,
-                modifier = Modifier.align(Alignment.Center).padding(16.dp)
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(16.dp)
             ) {
-                Text(text = errorMsg, modifier = Modifier.align(Alignment.CenterHorizontally).fillMaxSize().padding(16.dp).simplyScrollable())
+                Text(text = errorMsg, modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .fillMaxSize()
+                    .padding(16.dp)
+                    .simplyScrollable())
             }
         } else {
             LazyVerticalGrid(
@@ -411,7 +422,9 @@ fun SelectedImageThumbnail(image: ImageSource, modifier: Modifier = Modifier, hi
                 bitmap = it.asImageBitmap(),
                 contentDescription = image.description,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
             )
         } ?: Box(
             modifier = Modifier
@@ -597,6 +610,10 @@ fun TransformableImage(
 
     val viewConfiguration: android.view.ViewConfiguration = ViewConfiguration.get(LocalContext.current)
 
+    val animatedClipRect = remember { Animatable(srcRect, Rect.VectorConverter) }
+
+    var enableClip by remember { mutableStateOf(false) }
+
 
     // Load full-size image
     LaunchedEffect(image.id) {
@@ -624,12 +641,32 @@ fun TransformableImage(
     fun startDismiss() {
         log.d("Will dismiss")
         imageBoundsOnScreen.takeIf { it != Rect.Zero }?.let {
-            val (scale, _, translation) = it.getTransformTo(srcRect)
+            val scale = it.fit(image.size).let {
+                srcRect.width / minOf(it.width, it.height)
+            }
+            val finalClipRect = it.fit(image.size).fit(Size(1f, 1f))
+            val (_, _, translation) = it.getTransformTo(srcRect, scale)
+            enableClip = true
             scope.launch {
-                dismissProgress.animateTo(1f, PreviewPageDefaults.tween())
+                launch { dismissProgress.animateTo(1f, PreviewPageDefaults.tween()) }
+                launch {
+                    animatedClipRect.snapTo(Rect(0f, 0f, 1f, 1f))
+                    animatedClipRect.animateTo(Rect(
+                        Offset(
+                            x = (finalClipRect.left - it.left) / it.width,
+                            y = (finalClipRect.top - it.top) / it.height
+                        ),
+                        Size(
+                            width = finalClipRect.width / it.width,
+                            height = finalClipRect.height / it.height
+                        )
+
+                    ))
+                }
             }
             animateImageTransformTo(scale, translation) {
                 onDismiss.invoke()
+                enableClip = false
             }
         }
     }
@@ -680,10 +717,11 @@ fun TransformableImage(
                                 PreviewPageDefaults.scaleLimitMin,
                                 PreviewPageDefaults.scaleLimitMax
                             )
+                            val pivot = centroid.pivotIn(containerBounds.fit(image.size))
                             val scaleFactor = targetScale / scale.value
                             val translationDelta = Offset(
-                                x = (1f - scaleFactor) * (centroid.x - imageBounds.left) + pan.x,
-                                y = (1f - scaleFactor) * (centroid.y - imageBounds.top) + pan.y
+                                x = (1f - scaleFactor) * (pivot.x - imageBounds.left) + pan.x,
+                                y = (1f - scaleFactor) * (pivot.y - imageBounds.top) + pan.y
                             )
                             scale.snapTo(targetScale)
                             translation.snapTo(translation.value + translationDelta)
@@ -699,8 +737,8 @@ fun TransformableImage(
                             animateImageTransformTo(1f, Offset.Zero)
                         } else if (scale.value > 1f) {
                             scope.launch {
-                                val translationFix = calculateTranslationFix(imageBounds, containerBounds)
-                                log.d("zoom end fix: $translationFix, $imageBounds")
+                                val translationFix = calculateTranslationFix(imageBounds.fit(image.size), containerBounds)
+                                log.d("zoom end fix: $translationFix, input: ${imageBounds.fit(image.size)} $containerBounds")
                                 translation.animateTo(translation.value + translationFix, PreviewPageDefaults.tween())
                             }
                         }
@@ -765,9 +803,9 @@ fun TransformableImage(
                             translation = translationAfterScale
                         ).let {
                             val dstRectBeforeFix = originalRect.applyTransform(it)
-                            val translationFix = calculateTranslationFix(dstRectBeforeFix, containerBounds)
+                            val translationFix = calculateTranslationFix(dstRectBeforeFix.fit(image.size), containerBounds)
 
-                            log.d("double tap translation $translationAfterScale fix $translationFix")
+                            log.d("double tap translation $translationAfterScale fix $translationFix， , input: ${dstRectBeforeFix.fit(image.size)} $containerBounds")
 
                             animatePackedTransformTo(
                                 it.copy(
@@ -788,25 +826,29 @@ fun TransformableImage(
 
     ) {
         // Image with transformations
-        bitmap?.let { it ->
+        bitmap?.let { bitmap ->
             Image(
-                bitmap = it.asImageBitmap(),
+                bitmap = bitmap.asImageBitmap(),
                 contentDescription = image.description,
-                contentScale = ContentScale.FillWidth,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .wrapContentSize()
+                    .fillMaxSize()
                     .align(Alignment.Center)
                     .onGloballyPositioned {
                         originalImageBounds = it.boundsInParent()
+                        imageBoundsOnScreen = it.boundsInWindow()
+
                         log.d("original: $originalImageBounds")
                     }
                     .graphicsLayer {
-                        log.d("${scale.value}, ${translation.value}")
+                        log.d("${scale.value}, ${translation.value}, $enableClip, ${animatedClipRect.value}")
                         transformOrigin = TransformOrigin(0f, 0f)
                         scaleX = scale.value
                         scaleY = scale.value
                         translationX = translation.value.x
                         translationY = translation.value.y
+                        clip = enableClip
+                        shape = RelativeRectCutShape(animatedClipRect.value)
                     }
                     .onGloballyPositioned { coord ->
                         with(coord) {
@@ -817,10 +859,10 @@ fun TransformableImage(
 //                                translation = translation.value
 //                            ))
                             imageBounds = coord.boundsInParent()
-                            imageBoundsOnScreen = coord.boundsInWindow()
-                            log.i("after: $imageBounds")
+                            log.i("after: $imageBounds, $imageBoundsOnScreen")
                         }
                     }
+
             )
         } ?: Box(
             modifier = Modifier.fillMaxSize(),
@@ -829,4 +871,24 @@ fun TransformableImage(
             CircularProgressIndicator(color = Color.White)
         }
     }
+}
+
+class RelativeRectCutShape(private val fracRect: Rect): Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density
+    ): Outline {
+        return Outline.Rectangle(Rect(
+            Offset(
+                x = fracRect.left * size.width,
+                y = fracRect.top * size.height
+            ),
+            Size(
+                width = fracRect.width * size.width,
+                height = fracRect.height * size.height
+            )
+        ))
+    }
+
 }

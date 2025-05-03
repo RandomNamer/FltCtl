@@ -9,6 +9,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.geometry.Size
 import androidx.core.graphics.createBitmap
 import com.example.fltctl.AppMonitor
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +39,9 @@ interface ImageSource {
     val height: Int
 
 }
+
+val ImageSource.size: Size
+    get() = Size(width.toFloat(), height.toFloat())
 
 // Base implementation for all image sources
 abstract class BaseImageSource(

@@ -9,9 +9,12 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
@@ -244,3 +247,35 @@ fun calculateTranslationFix(dstBound: Rect, containerBound: Rect): Offset {
 
 val Velocity.total: Float
     get() = sqrt(x*x + y*y)
+
+fun Rect.fit(imageSize: Size): Rect {
+    val scaleFactor = ContentScale.Fit.computeScaleFactor(imageSize, size)
+
+    // Calculate the scaled dimensions of the image
+    val scaledWidth = imageSize.width * scaleFactor.scaleX
+    val scaledHeight = imageSize.height * scaleFactor.scaleY
+
+    // Calculate the position to center the image within the rect
+    val targetLeft = left + (size.width - scaledWidth) / 2f
+    val targetTop = top + (size.height - scaledHeight) / 2f
+
+    // Create a new Rect with the scaled dimensions and centered position
+    return Rect(Offset(targetLeft, targetTop), Size(scaledWidth, scaledHeight))
+}
+
+fun imagePivotIn(imageSize: Size, containerSize: Size): TransformOrigin {
+    val containerAspectRatio = containerSize.width / containerSize.height
+    val imageAspectRatio = imageSize.width / imageSize.height
+    return if (imageAspectRatio > containerAspectRatio) {
+        //fit width
+        TransformOrigin(
+            pivotFractionX = 0f,
+            pivotFractionY = (1 - containerAspectRatio / imageAspectRatio) / 2f
+        )
+    } else {
+        TransformOrigin(
+            pivotFractionX = (1 - imageAspectRatio / containerAspectRatio) / 2f,
+            pivotFractionY = 0f
+        )
+    }
+}

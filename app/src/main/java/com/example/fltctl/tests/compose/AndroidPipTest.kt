@@ -88,7 +88,7 @@ private fun NormalUi(count: MutableIntState, logs: List<String>) {
     val hss = rememberScrollState()
     val activity = LocalActivity.current
     Column(Modifier.padding(12.dp)) {
-        CommonCounterUi(count.value)
+        CommonCounterUi(count.intValue)
         Spacer(Modifier.size(16.dp))
         Column(Modifier
             .fillMaxWidth()
