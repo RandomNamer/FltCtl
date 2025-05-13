@@ -2,6 +2,7 @@ package com.example.fltctl.tests.compose.albumtest
 
 import android.graphics.Bitmap
 import android.view.ViewConfiguration
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -87,7 +88,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.fltctl.AppMonitor
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.ui.theme.FltCtlTheme
 import com.example.fltctl.utils.androidLogs
@@ -113,7 +113,7 @@ val albumPreviewUiTest = UiTest.ComposeUiTest(
         }
     }
 ).also {
-    AppMonitor.addStartupTestPage(it)
+//    AppMonitor.addStartupTestPage(it)
 }
 
 internal val log by androidLogs("AlbumTest")
@@ -502,6 +502,7 @@ fun MultiImagePreview(images: List<ImageSource>, initialPage: Int, currentThumbR
             onDismiss = { onDismiss.invoke() },
             onDismissProgressChange = { dismissProgress = it },
             srcRect = currentThumbRect,
+            containerVisible = pagerState.currentPage == page
         )
     }
     // UIs
@@ -581,6 +582,20 @@ object PreviewPageDefaults {
     fun dismissThreshold(containerHeight: Float) = containerHeight * 0.2f // 20% of screen height for dismiss
 }
 
+private class BoundsStateHolder(
+    var imageBoundsInParent: Rect = Rect.Zero,
+    var originalImageBoundsInParent: Rect = Rect.Zero,
+    var originalImageBoundsInWindow: Rect = Rect.Zero,
+    var containerBounds: Rect = Rect.Zero
+) {
+    init {
+        log.d("BoundsStateHolder init")
+    }
+    override fun toString(): String {
+        return "BoundsStateHolder(imageBoundsInParent=$imageBoundsInParent, originalImageBoundsInParent=$originalImageBoundsInParent, imageBoundsInWindow=$originalImageBoundsInWindow, containerBounds=$containerBounds)"
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TransformableImage(
@@ -589,6 +604,7 @@ fun TransformableImage(
     onDismiss: () -> Unit,
     onDismissProgressChange: (Float) -> Unit,
     srcRect: Rect = Rect.Zero,
+    containerVisible: Boolean
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var scale = remember { Animatable(1f) }
@@ -596,21 +612,13 @@ fun TransformableImage(
     var translation = remember { Animatable(Offset.Zero, Offset.VectorConverter)}
     var dismissProgress = remember { Animatable(0f) }
 
-    var imageBounds = remember { Rect.Zero }
-
-    var originalImageBounds = Rect.Zero
-
-    //clipped
-    var imageBoundsOnScreen = Rect.Zero
-
-    var containerBounds = Rect.Zero
-
+    val boundsHolder = remember { BoundsStateHolder() }
 
     val scope = rememberCoroutineScope()
 
     val viewConfiguration: android.view.ViewConfiguration = ViewConfiguration.get(LocalContext.current)
 
-    val animatedClipRect = remember { Animatable(srcRect, Rect.VectorConverter) }
+    val animatedClipRect = remember { Animatable(Rect(0f, 0f, 1f, 1f), Rect.VectorConverter) }
 
     var enableClip by remember { mutableStateOf(false) }
 
@@ -639,8 +647,8 @@ fun TransformableImage(
     }
 
     fun startDismiss() {
-        log.d("Will dismiss")
-        imageBoundsOnScreen.takeIf { it != Rect.Zero }?.let {
+        log.d("Will dismiss $boundsHolder")
+        boundsHolder.takeIf { it.originalImageBoundsInWindow != Rect.Zero }?.let { it.originalImageBoundsInWindow }?.let {
             val scale = it.fit(image.size).let {
                 srcRect.width / minOf(it.width, it.height)
             }
@@ -648,9 +656,9 @@ fun TransformableImage(
             val (_, _, translation) = it.getTransformTo(srcRect, scale)
             enableClip = true
             scope.launch {
+                animatedClipRect.snapTo(Rect(0f, 0f, 1f, 1f))
                 launch { dismissProgress.animateTo(1f, PreviewPageDefaults.tween()) }
                 launch {
-                    animatedClipRect.snapTo(Rect(0f, 0f, 1f, 1f))
                     animatedClipRect.animateTo(Rect(
                         Offset(
                             x = (finalClipRect.left - it.left) / it.width,
@@ -671,6 +679,13 @@ fun TransformableImage(
         }
     }
 
+    BackHandler(
+        enabled = containerVisible,
+        onBack = {
+            startDismiss()
+        }
+    )
+
     fun reset() {
         scope.launch {
             scale.snapTo(1f)
@@ -679,6 +694,8 @@ fun TransformableImage(
     }
 
     fun onDragOrFling(dragChange: Offset) = scope.launch {
+        val imageBounds = boundsHolder.imageBoundsInParent
+        val containerBounds = boundsHolder.containerBounds
         if (isInZoom()) {
             val validOffset = calculateDragAmountForZoom(imageBounds, containerBounds, dragChange)
             log.d("drag: $dragChange -> $validOffset. final image bound=${imageBounds}, screenBound=$containerBounds")
@@ -701,7 +718,7 @@ fun TransformableImage(
             .fillMaxSize()
             .onGloballyPositioned {
                 with(it) {
-                    if (containerBounds == Rect.Zero) containerBounds = Rect(Offset.Zero, size.toSize())
+                    boundsHolder.containerBounds = Rect(Offset.Zero, size.toSize())
                 }
             }
             .pointerInput(srcRect) {
@@ -712,6 +729,8 @@ fun TransformableImage(
                     onZoomGesture = { centroid, pan, zoom ->
                         // centroid is always from last frame
 //                        log.d("double pointer zoom!")
+                        val imageBounds = boundsHolder.imageBoundsInParent
+                        val containerBounds = boundsHolder.containerBounds
                         scope.launch {
                             val targetScale = (scale.value * zoom).coerceIn(
                                 PreviewPageDefaults.scaleLimitMin,
@@ -736,6 +755,8 @@ fun TransformableImage(
                             onGestureStateUpdate(GestureState.IDLE)
                             animateImageTransformTo(1f, Offset.Zero)
                         } else if (scale.value > 1f) {
+                            val imageBounds = boundsHolder.imageBoundsInParent
+                            val containerBounds = boundsHolder.containerBounds
                             scope.launch {
                                 val translationFix = calculateTranslationFix(imageBounds.fit(image.size), containerBounds)
                                 log.d("zoom end fix: $translationFix, input: ${imageBounds.fit(image.size)} $containerBounds")
@@ -753,6 +774,7 @@ fun TransformableImage(
                         }
                     },
                     onDragEnd = { v ->
+                        val containerBounds = boundsHolder.containerBounds
                         if (!isInZoom()) {
                             if (translation.value.y > PreviewPageDefaults.dismissThreshold(containerBounds.height)) {
                                 startDismiss()
@@ -791,7 +813,9 @@ fun TransformableImage(
                     scope.coroutineContext.cancelChildren()
                     val scaleUp = scale.value < PreviewPageDefaults.doubleTapScale
                     if (scaleUp) {
-                        val originalRect = originalImageBounds
+                        val imageBounds = boundsHolder.imageBoundsInParent
+                        val originalRect = boundsHolder.originalImageBoundsInParent
+                        val containerBounds = boundsHolder.containerBounds
                         val scaleFactor = PreviewPageDefaults.doubleTapScale / scale.value
                         val translationAfterScale = -Offset(
                             x = (scaleFactor - 1) * (point.x - imageBounds.left),
@@ -831,14 +855,12 @@ fun TransformableImage(
                 bitmap = bitmap.asImageBitmap(),
                 contentDescription = image.description,
                 contentScale = ContentScale.Fit,
+                alignment = Alignment.Center,
                 modifier = Modifier
                     .fillMaxSize()
-                    .align(Alignment.Center)
                     .onGloballyPositioned {
-                        originalImageBounds = it.boundsInParent()
-                        imageBoundsOnScreen = it.boundsInWindow()
-
-                        log.d("original: $originalImageBounds")
+                        boundsHolder.originalImageBoundsInParent = it.boundsInParent()
+                        boundsHolder.originalImageBoundsInWindow = it.boundsInWindow()
                     }
                     .graphicsLayer {
                         log.d("${scale.value}, ${translation.value}, $enableClip, ${animatedClipRect.value}")
@@ -858,8 +880,8 @@ fun TransformableImage(
 //                                pivot = originalImageBounds.topLeft,
 //                                translation = translation.value
 //                            ))
-                            imageBounds = coord.boundsInParent()
-                            log.i("after: $imageBounds, $imageBoundsOnScreen")
+                            boundsHolder.imageBoundsInParent = coord.boundsInParent()
+                            log.i("after: $boundsHolder")
                         }
                     }
 
