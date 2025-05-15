@@ -30,11 +30,13 @@ import com.example.fltctl.tests.compose.albumtest.albumPreviewUiTest
 import com.example.fltctl.tests.compose.androidPipTest
 import com.example.fltctl.tests.compose.defaultImplIssueTest
 import com.example.fltctl.tests.compose.flingTest
+import com.example.fltctl.tests.compose.oobTouchEventTestCompose
 import com.example.fltctl.tests.compose.paddingSeqTest
 import com.example.fltctl.tests.controls.CrashTest
 import com.example.fltctl.tests.controls.FloatingControlIntegrationTest
 import com.example.fltctl.tests.controls.LogViewer
 import com.example.fltctl.tests.controls.OobTouchEventTest
+import com.example.fltctl.tests.scripting.androidScriptingRunnerEntry
 import com.example.fltctl.tests.views.textViewEllipsizeTest
 import com.example.fltctl.ui.theme.FltCtlTheme
 import com.example.fltctl.ui.theme.LocalEInkMode
@@ -49,20 +51,23 @@ import logTrimmer
  */
 object TestEntry {
     private val registry = mutableSetOf<UiTest>(
+        androidScriptingRunnerEntry,
         FloatingControlIntegrationTest(),
         albumPreviewUiTest,
         LogViewer(),
-        textViewEllipsizeTest,
-        flingTest,
-        paddingSeqTest,
-        defaultImplIssueTest,
         OobTouchEventTest(),
+        oobTouchEventTestCompose,
         androidPipTest,
         CrashTest(),
     )
 
     private val debugOnly = mutableSetOf<UiTest>(
-        logTrimmer
+        logTrimmer,
+        flingTest,
+        paddingSeqTest,
+        defaultImplIssueTest,
+        textViewEllipsizeTest,
+
     )
 
     @Composable

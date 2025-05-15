@@ -75,7 +75,7 @@ fun EInkCompatCard(
         border = if (isInEInkMode) BorderStroke(2.dp, outlineColor) else border,
     ) {
         Surface(Modifier.wrapContentSize(), tonalElevation = if (isInEInkMode) 0.dp else tonalElevation) {
-            Column(Modifier.fillMaxWidth()) {
+            Column() {
                 content((shape as? RoundedCornerShape)?.recommendedPadding() ?: PaddingValues(0.dp))
             }
         }

@@ -43,10 +43,16 @@ sealed interface UiTest {
     data class ComposeUiTest(
         override val title: String, override val description: String = "",
         val content: @Composable BoxScope.() -> Unit,
-        val fullscreen: Boolean = false
+        val fullscreen: Boolean = false,
+        private val onActivityCreate: (activity: AppCompatActivity) -> Unit = {}
     ): UiTest {
         override fun onActivityCreate(activity: AppCompatActivity) {
             activity.setTheme(R.style.Theme_FltCtl)
+            onActivityCreate.invoke(activity)
+        }
+
+        override fun onEntryShow() {
+            super.onEntryShow()
         }
     }
 

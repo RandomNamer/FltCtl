@@ -721,14 +721,14 @@ fun TransformableImage(
                     boundsHolder.containerBounds = Rect(Offset.Zero, size.toSize())
                 }
             }
-            .pointerInput(srcRect) {
+            .pointerInput(Unit) {
 //                detectVerticalDragGestures { change, dragAmount ->  }
 
                 detectZoomAndDrag(
                     detectVerticalOnly = { !isInZoom() },
                     onZoomGesture = { centroid, pan, zoom ->
                         // centroid is always from last frame
-//                        log.d("double pointer zoom!")
+                        log.d("double pointer zoom: raw value: $zoom")
                         val imageBounds = boundsHolder.imageBoundsInParent
                         val containerBounds = boundsHolder.containerBounds
                         scope.launch {

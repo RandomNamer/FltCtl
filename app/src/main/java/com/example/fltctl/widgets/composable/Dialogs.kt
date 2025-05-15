@@ -49,7 +49,7 @@ import com.example.fltctl.ui.theme.isInEInkMode
  * // for these dialogs
  */
 @Stable
-data class DualStateListItem<T:Any> (
+data class DualStateListItem<T:Any?> (
     val enabled: Boolean,
     val text: String,
     val payload: T? = null
@@ -69,8 +69,9 @@ fun <T: Any> DualStateListDialog(
     items: List<DualStateListItem<T>>,
     title: String,
     onDismissRequest: () -> Unit,
-    onItemSelected: (T?) -> Unit,
+    onItemSelected: (T?) -> Unit = {},
     mainAction: Pair<String, () -> Unit>? = null,
+    customCancelAction: Pair<String?, (() -> Unit)?>? = null,
     footer: @Composable () -> Unit = {},
     customItemContent: (@Composable BoxScope.(DualStateListItem<T>) -> Unit)? = null,
     eInkMode: Boolean = isInEInkMode,
@@ -168,10 +169,12 @@ fun <T: Any> DualStateListDialog(
             }
         },
         dismissButton = {
-            if (eInkMode) OutlinedButton(onClick = onDismissRequest) {
-                Text(stringResource(R.string.cancel))
-            } else TextButton(onClick = onDismissRequest) {
-                Text(stringResource(R.string.cancel))
+            val text = customCancelAction?.first ?: stringResource(R.string.cancel)
+            val clickHandler = customCancelAction?.second ?: onDismissRequest
+            if (eInkMode) OutlinedButton(onClick = clickHandler) {
+                Text(text)
+            } else TextButton(onClick = clickHandler) {
+                Text(text)
             }
         },
     )

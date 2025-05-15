@@ -14,7 +14,6 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.example.fltctl.AppMonitor
 import com.example.fltctl.controls.arch.FloatingControlInfo
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.utils.androidLogs
@@ -28,7 +27,7 @@ import com.example.fltctl.widgets.view.takeDp
 class OobTouchEventTest: UiTest.FltCtlUiTest() {
 
     init {
-        AppMonitor.addStartupTestPage(this)
+//        AppMonitor.addStartupTestPage(this)
     }
 
     private lateinit var tv: TextView
