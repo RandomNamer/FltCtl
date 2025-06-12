@@ -115,8 +115,8 @@ fun FlingScreen() {
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        EInkCompatCard(isInEInkMode = false, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
+        EInkCompatCard(isInEInkMode = false) {
+            Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text("Fling Behavior Controls", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
 

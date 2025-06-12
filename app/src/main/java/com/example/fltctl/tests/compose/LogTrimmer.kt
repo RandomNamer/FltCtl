@@ -17,6 +17,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -49,6 +50,7 @@ import kotlinx.coroutines.withContext
 /**
  * Data class to hold log file information
  */
+@Stable
 data class LogFileInfo(
     val fileName: String,
     val diskSize: Long,
@@ -142,7 +144,7 @@ fun LogTrimmerScreen() {
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(logFiles) { fileInfo ->
+                        items(logFiles, key = { it.fileName }) { fileInfo ->
                             LogFileItem(
                                 fileInfo,
                             )

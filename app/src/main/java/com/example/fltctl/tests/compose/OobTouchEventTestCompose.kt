@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastMap
 import com.example.fltctl.tests.UiTest
 import kotlin.math.abs
 
@@ -59,7 +60,7 @@ private fun Screen() {
                         Log.d("CameraGestureDet", "child view down")
                         do {
                             val event = awaitPointerEvent(PointerEventPass.Main)
-//                            Log.d("CameraGestureDet", "child view ${event.changes.fastMap { it.id.value }}")
+                            Log.d("CameraGestureDet", "child view ${event.changes.fastMap { it.id.value }}")
                             event.changes.fastForEach { it.consume() }
                         } while (event.changes.fastAny { it.pressed })
                         Log.d("CameraGestureDet", "child view released")
@@ -84,7 +85,7 @@ internal suspend fun PointerInputScope.detectZoomWhenShoot(
 
             val canceled = !event.changes.fastAny { !it.isConsumed }
             val otherFingers = event.changes.fastFilter { !it.isConsumed && it.pressed }
-//            Log.d("CameraGestureDet", "all fingers: ${event.changes.fastMap { it.id.value }}, fingerCount: ${otherFingers.count()}. $canceled")
+            Log.d("CameraGestureDet", "all fingers: ${event.changes.fastMap { it.id.value }}, fingerCount: ${otherFingers.count()}. $canceled")
             if (!canceled && otherFingers.count() >= 2) {
                 val zoomChange = otherFingers.calculateZoom()
                 val panChange = otherFingers.calculatePan()

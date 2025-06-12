@@ -446,22 +446,34 @@ fun androidLogs(tag: String): Lazy<Logger> = lazy {
 
 /**
  * Logger class for convenient logging
+ * @param interceptor return false if swallow the log
  */
 class Logger(
     private val tag: String,
-    private val proxy: LogProxy = MmapLogProxy.getInstance()
+    private val proxy: LogProxy = MmapLogProxy.getInstance(),
+    private val interceptor: ((level: Int, message: String) -> Boolean)? = null
 ) {
     private var enabled = true
+
+    private val realProxy = object: LogProxy {
+        override fun log(level: Int, tag: String, message: String) {
+            if (check(level, message)) proxy.log(level, tag, message)
+        }
+    }
 
     fun enable(value: Boolean) {
         enabled = value
     }
 
-    fun v(message: String) = if (enabled) proxy.log(LogProxy.VERBOSE, tag, message) else Unit
-    fun d(message: String) = if (enabled) proxy.log(LogProxy.DEBUG, tag, message) else Unit
-    fun i(message: String) = if (enabled) proxy.log(LogProxy.INFO, tag, message) else Unit
-    fun w(message: String) = if (enabled)proxy.log(LogProxy.WARN, tag, message) else Unit
-    fun e(message: String) = if (enabled) proxy.log(LogProxy.ERROR, tag, message) else Unit
+    private fun check(level: Int, content: String): Boolean {
+        return enabled && interceptor?.invoke(level, content) != false
+    }
+
+    fun v(message: String) = realProxy.log(LogProxy.VERBOSE, tag, message)
+    fun d(message: String) = realProxy.log(LogProxy.DEBUG, tag, message)
+    fun i(message: String) = realProxy.log(LogProxy.INFO, tag, message)
+    fun w(message: String) = realProxy.log(LogProxy.WARN, tag, message)
+    fun e(message: String) = realProxy.log(LogProxy.ERROR, tag, message)
 }
 
 fun String.logLevel(): Int {

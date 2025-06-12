@@ -30,7 +30,6 @@ import com.example.fltctl.tests.compose.albumtest.albumPreviewUiTest
 import com.example.fltctl.tests.compose.androidPipTest
 import com.example.fltctl.tests.compose.defaultImplIssueTest
 import com.example.fltctl.tests.compose.flingTest
-import com.example.fltctl.tests.compose.oobTouchEventTestCompose
 import com.example.fltctl.tests.compose.paddingSeqTest
 import com.example.fltctl.tests.controls.CrashTest
 import com.example.fltctl.tests.controls.FloatingControlIntegrationTest
@@ -56,7 +55,7 @@ object TestEntry {
         albumPreviewUiTest,
         LogViewer(),
         OobTouchEventTest(),
-        oobTouchEventTestCompose,
+//        oobTouchEventTestCompose,
         androidPipTest,
         CrashTest(),
     )
@@ -136,11 +135,11 @@ object TestEntry {
     }
 
     private fun enterTest(context: Context, test: UiTest) {
-        ViewBasedTestsContainerActivity.launch(context, test)
+        TestsContainerActivity.launch(context, test)
     }
 
     fun enterFltCtlIntegrationTest(context: Context) {
-        ViewBasedTestsContainerActivity.launch(context, FloatingControlIntegrationTest().info)
+        TestsContainerActivity.launch(context, FloatingControlIntegrationTest().info)
     }
 
 }

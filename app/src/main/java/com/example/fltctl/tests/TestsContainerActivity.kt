@@ -3,6 +3,7 @@ package com.example.fltctl.tests
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.PersistableBundle
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
@@ -26,9 +27,10 @@ import kotlin.reflect.KClass
 /**
  * We dont like fragments. For complex UI, compose is sufficient for SAA.
  */
-class ViewBasedTestsContainerActivity : AppCompatActivity() {
+class TestsContainerActivity : AppCompatActivity() {
 
     companion object {
+        //TODO: launch replay and associated obj store
         private const val PERSIST_WHEN_CONFIG_CHANGE = false
 
         private const val LAUNCH_MODE_NOTHING = 0
@@ -60,7 +62,7 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
         @JvmStatic
         fun launch(context: Context, floatingControl: FloatingControlInfo) {
             transactionObjStore.put(TRANSACTION_OBJ_FLTCTL, floatingControl)
-            context.startActivity(Intent(context, ViewBasedTestsContainerActivity::class.java).apply {
+            context.startActivity(Intent(context, TestsContainerActivity::class.java).apply {
                 putExtra(EXTRA_LAUNCH_MODE, LAUNCH_MODE_FLTCTL)
             })
         }
@@ -68,7 +70,7 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
         @JvmStatic
         @JvmOverloads
         fun launch(context: Context, test: UiTest, intentTransform: ((Intent) -> Unit)? = null) {
-            val intent = Intent(context, ViewBasedTestsContainerActivity::class.java).apply {
+            val intent = Intent(context, TestsContainerActivity::class.java).apply {
                 putExtra(EXTRA_TITLE, test.title)
                 putExtra(EXTRA_DESC, test.description)
             }
@@ -120,9 +122,9 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
             transactionObjStore.put(TRANSACTION_OBJ_COMMON, Class.forName(it).newInstance())
         }
         transactionObjStore.getAndRemove<UiTest>(TRANSACTION_OBJ_COMMON)?.run {
-            onActivityCreate(this@ViewBasedTestsContainerActivity)
+            onActivityCreate(this@TestsContainerActivity)
             menuItems.clear()
-            menuItems.addAll(produceMenuItems(this@ViewBasedTestsContainerActivity))
+            menuItems.addAll(produceMenuItems(this@TestsContainerActivity))
         }
         super.onCreate(savedInstanceState)
         parseIntent()
@@ -132,6 +134,11 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
         initView(rootContainer)
         setContentView(rootContainer)
         transactionObjStore.clear()
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
+        super.onRestoreInstanceState(savedInstanceState, persistentState)
+        initView(rootContainer)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -184,7 +191,7 @@ class ViewBasedTestsContainerActivity : AppCompatActivity() {
                         title = fi.displayName
 //                   supportActionBar?.title = fi.displayName
                         floatingControlInstance?.run {
-                            create(this@ViewBasedTestsContainerActivity, true)
+                            create(this@TestsContainerActivity, true)
                             val view = getView().apply {
                                 val originalLp = layoutParams
                                 layoutParams = FrameLayout.LayoutParams(

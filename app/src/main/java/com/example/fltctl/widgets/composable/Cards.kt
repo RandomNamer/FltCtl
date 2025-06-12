@@ -68,7 +68,7 @@ fun EInkCompatCard(
     val outlineColor = MaterialTheme.colorScheme.onBackground
     if (isInEInkMode) modifier.background(Color.White)
     Card(
-        modifier = modifier,
+        modifier = modifier.wrapContentSize(),
         shape,
         if (!isInEInkMode) colors else CardDefaults.outlinedCardColors(containerColor = Color.White),
         if (!isInEInkMode) shadowElevation else CardDefaults.cardElevation(0.dp),

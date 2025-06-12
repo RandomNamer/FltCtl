@@ -14,8 +14,8 @@ import androidx.annotation.MainThread
 import com.example.fltctl.appselection.ui.AppSelectActivity
 import com.example.fltctl.configs.SettingsCache
 import com.example.fltctl.tests.TestEntry
+import com.example.fltctl.tests.TestsContainerActivity
 import com.example.fltctl.tests.UiTest
-import com.example.fltctl.tests.ViewBasedTestsContainerActivity
 import com.example.fltctl.tests.compose.AfterCrash
 import com.example.fltctl.tests.compose.CrashInfo
 import com.example.fltctl.ui.toast
@@ -82,7 +82,7 @@ class FloatingControlApp : Application() {
     @MainThread
     private fun launchCrashScreen(info: CrashInfo) {
         AppMonitorImpl.topActivity?.run {
-            ViewBasedTestsContainerActivity.launch(this, AfterCrash::class) {
+            TestsContainerActivity.launch(this, AfterCrash::class) {
                 it.putExtra(CRASH_RECOVER, info)
             }
         }
@@ -226,7 +226,7 @@ private object AppMonitorImpl : IAppMonitorService {
                 delay(500L)
                 appStartupTest?.let {
                     _topActivity.get()?.let { act ->
-                        ViewBasedTestsContainerActivity.launch(act, it)
+                        TestsContainerActivity.launch(act, it)
                     }
                 }
                 appStartupTest = null

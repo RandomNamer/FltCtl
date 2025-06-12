@@ -2,6 +2,7 @@ package com.example.fltctl.tests.scripting
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,11 +49,15 @@ import com.example.fltctl.utils.MmapLogProxy
 import com.example.fltctl.widgets.composable.DualStateListDialog
 import com.example.fltctl.widgets.composable.DualStateListItem
 import com.example.fltctl.widgets.composable.EInkCompatCard
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.system.measureTimeMillis
 
 /**
@@ -60,18 +65,20 @@ import kotlin.system.measureTimeMillis
  * @author zeyu.zyzhang@bytedance.com
  */
 data class AndroidScriptConfig internal constructor(
-    val main: AndroidScriptRunnerScope.() -> Unit,
+    val main: suspend AndroidScriptRunnerScope.() -> Unit,
     val title: String,
     val enableErrorCatching: Boolean = true,
     val enableLocalLogging: Boolean = false,
 )
 
+internal const val UNNAMED = "__unnamed"
+
 
 fun script(
-    name: String,
+    name: String = UNNAMED,
     enableErrorCatching: Boolean = true,
     enableLocalLogging: Boolean = false,
-    main: AndroidScriptRunnerScope.() -> Unit
+    main: suspend AndroidScriptRunnerScope.() -> Unit
 ) = AndroidScriptConfig(
     main, name, enableErrorCatching, enableLocalLogging
 ).also {
@@ -80,9 +87,14 @@ fun script(
 
 interface AndroidScriptRunnerScope {
     val log: Logger
-    fun println(message: String)
+    fun println(message: Any?)
     fun toast(message: String)
-    val coroutineScope: kotlinx.coroutines.CoroutineScope
+
+    /**
+     * Provides concurrency via another coroutineScope on other thread
+     */
+    val coroutineScope: CoroutineScope
+    val androidContext: Context
 }
 
 interface ScriptRunnerListener {
@@ -92,17 +104,18 @@ interface ScriptRunnerListener {
 }
 
 class ScriptOutputFlow {
-    private val _outputFlow = kotlinx.coroutines.flow.MutableSharedFlow<String>(replay = 100)
+    private val _outputFlow = MutableSharedFlow<String>(replay = 100, extraBufferCapacity = 101)
     val outputFlow = _outputFlow.asSharedFlow()
     
     suspend fun emit(message: String) {
         _outputFlow.emit(message)
     }
     
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun clear() {
         // Clear replay cache by creating a new flow
         // This is a workaround as SharedFlow doesn't have a clear method
-        (_outputFlow as kotlinx.coroutines.flow.MutableSharedFlow<String>).resetReplayCache()
+        _outputFlow.resetReplayCache()
     }
 }
 
@@ -116,39 +129,77 @@ class AndroidScriptRunner(
     private var executionTimeMs = 0L
     private var hasError = false
     val outputFlow = ScriptOutputFlow()
-    private val auxiliaryScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Default)
+    private var suppressOutput = false
+    private val runnerMain = CoroutineScope(Dispatchers.Default)
+    private val auxiliaryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     
     private val runnerScope = object : AndroidScriptRunnerScope {
         override val log: Logger = if (config.enableLocalLogging) {
-            Logger(config.title, MmapLogProxy.getInstance())
+            Logger(config.title, MmapLogProxy.getInstance()) { level, message ->
+                println("[LocalFileLog] $message")
+                true
+            }
         } else {
             Logger(config.title, LogProxy.getAndroid())
         }
         
-        override val coroutineScope: kotlinx.coroutines.CoroutineScope = auxiliaryScope
-        
-        override fun println(message: String) {
-            outputList.add(message)
+        override val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+
+        override val androidContext: Context
+            get() = context
+
+        override fun println(message: Any?) {
+            if (suppressOutput) return
+            val msgString = message.toString()
+            outputList.add(msgString)
             auxiliaryScope.launch {
-                outputFlow.emit(message)
+                outputFlow.emit(msgString)
             }
-            listener?.onScriptOutput(message)
+            listener?.onScriptOutput(msgString)
         }
         
         override fun toast(message: String) {
+            if (suppressOutput) return
             auxiliaryScope.launch(Dispatchers.Main) {
                 context.toast(message)
             }
         }
     }
-    
-    private suspend fun runOnContext(context: Context, block: () -> Unit) {
-        if (context is android.app.Activity) {
-            withContext(Dispatchers.Main) {
-                block()
+
+    fun bench(maxIter: Int = 1000, warmupIter: Int = 10, timeoutMs: Long = 15000L) {
+        if (isRunning) return
+        isRunning = true
+        hasError = false
+        outputList.clear()
+        outputFlow.clear()
+        suppressOutput = true
+        runnerScope.log.enable(false)
+        runnerMain.launch {
+            repeat(warmupIter) {
+                try {
+                    config.main(runnerScope)
+                } catch (e: Exception) {}
             }
-        } else {
-            block()
+            var iter = 0
+            val start = SystemClock.elapsedRealtime()
+            while (iter < maxIter) {
+                try {
+                    config.main(runnerScope)
+                } catch (e: Exception) {
+                    hasError = true
+                    break
+                }
+                iter++
+                if (SystemClock.elapsedRealtime() - start > timeoutMs) {
+                    break
+                }
+            }
+            suppressOutput = false
+            isRunning = false
+            val time = SystemClock.elapsedRealtime() - start
+            listener?.onScriptComplete(time)
+            runnerScope.println("Bench completed in ${time}ms")
+            runnerScope.println("Benched $iter rounds")
         }
     }
     
@@ -158,9 +209,9 @@ class AndroidScriptRunner(
         hasError = false
         outputList.clear()
         outputFlow.clear()
-        
+        suppressOutput = false
         try {
-            runnerScope.coroutineScope.launch(Dispatchers.Default) {
+            runnerMain.launch {
                 executionTimeMs = measureTimeMillis {
                     if (config.enableErrorCatching) {
                         try {
@@ -178,7 +229,7 @@ class AndroidScriptRunner(
                         config.main(runnerScope)
                     }
                 }
-
+                delay(1)
                 runnerScope.println("Script completed in ${executionTimeMs}ms")
                 listener?.onScriptComplete(executionTimeMs)
             }
@@ -194,6 +245,7 @@ class AndroidScriptRunner(
     fun hasError(): Boolean = hasError
 
     fun cancel() {
+        runnerMain.cancel()
         auxiliaryScope.cancel()
         runnerScope.coroutineScope.cancel()
     }
@@ -289,8 +341,6 @@ private fun ScriptCard(
     onClick: () -> Unit
 ) {
     EInkCompatCard(
-        modifier = Modifier
-            .wrapContentSize(),
         shape = RoundedCornerShape(16.dp),
         tonalElevation = 8.dp,
         colors = CardDefaults.elevatedCardColors(
@@ -359,6 +409,14 @@ private fun ScriptCard(
     }
 }
 
+fun String.formatWithColor(): Pair<Color, String> = when {
+    startsWith("ERROR:") -> Color.Red
+    startsWith("  at ") -> Color.Red.copy(alpha = 0.7f)
+    contains("completed in") -> Color.Green
+    else -> Color.Unspecified
+} to this
+
+
 @Composable
 private fun ShowScriptOutputDialog(
     script: AndroidScriptConfig,
@@ -368,7 +426,7 @@ private fun ShowScriptOutputDialog(
     val coroutineScope = rememberCoroutineScope()
     
     // State for script outputs and running state
-    val outputList = remember { mutableStateListOf<String>() }
+    val coloredOutputList = remember { mutableStateListOf<Pair<Color, String>>() }
     var isRunning by remember { mutableStateOf(true) }
     var executionTime by remember { mutableStateOf(0L) }
     var hasError by remember { mutableStateOf(false) }
@@ -398,13 +456,13 @@ private fun ShowScriptOutputDialog(
     // Collect outputs from flow
     LaunchedEffect(scriptRunner) {
         scriptRunner.outputFlow.outputFlow.collect { message ->
-            outputList.add(message)
+            coloredOutputList.add(message.formatWithColor())
         }
     }
     
     // Execute the script when the dialog is shown
     LaunchedEffect(scriptRunner) {
-        outputList.clear()
+        coloredOutputList.clear()
         hasError = false
         scriptRunner.execute()
     }
@@ -420,18 +478,12 @@ private fun ShowScriptOutputDialog(
         }
     }
     
-    val items = outputList.map { output ->
-        val color = when {
-            output.startsWith("ERROR:") -> Color.Red
-            output.startsWith("  at ") -> Color.Red.copy(alpha = 0.7f)
-            output.contains("completed in") -> Color.Green
-            else -> Color.Unspecified
-        }
+    val items = coloredOutputList.map {
         
-        DualStateListItem(true, output, color)
+        DualStateListItem(true, it.second, it.first)
     }
     
-    val hasErrorInOutput = outputList.any { it.startsWith("ERROR:") }
+    val hasErrorInOutput = scriptRunner.hasError()
     
     val dialogTitle = when {
         isRunning -> "${script.title} (Running...)"
@@ -443,6 +495,9 @@ private fun ShowScriptOutputDialog(
         items = items,
         title = dialogTitle,
         onDismissRequest = {},
+        mainAction = "Bench" to {
+            scriptRunner.bench(10000, 100)
+        },
         customCancelAction = null to {
             scriptRunner.cancel()
             onDismiss.invoke()

@@ -19,8 +19,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.fltctl.R
 import com.example.fltctl.controls.arch.FloatingControlInfo
 import com.example.fltctl.tests.SimpleMenuItem
+import com.example.fltctl.tests.TestsContainerActivity
 import com.example.fltctl.tests.UiTest
-import com.example.fltctl.tests.ViewBasedTestsContainerActivity
 import com.example.fltctl.utils.LogProxy
 import com.example.fltctl.utils.MmapLogProxy
 import com.example.fltctl.utils.logLevel
@@ -70,7 +70,7 @@ class LogViewer: UiTest.FltCtlUiTest() {
 
     override fun produceMenuItems(context: Activity): List<SimpleMenuItem> = listOf(
         SimpleMenuItem(R.drawable.baseline_playlist_remove_24, "Log trimmer", {
-            ViewBasedTestsContainerActivity.launch(it, logTrimmer)
+            TestsContainerActivity.launch(it, logTrimmer)
         })
     )
 }

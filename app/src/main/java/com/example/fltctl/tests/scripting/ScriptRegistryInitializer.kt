@@ -10,7 +10,7 @@ import java.lang.reflect.Modifier
  * @author zeyu.zyzhang@bytedance.com
  */
 
-//Add code from other roots here
+//Add code from other roots here, and remember keep
 
 private val scriptRoots = listOf(
   "com.example.fltctl.tests.scripting.ScriptRoot"
@@ -29,7 +29,16 @@ fun initializeScriptRoots() {
                     if (returnType == AndroidScriptConfig::class.java) {
                         if (!method.isAccessible) method.isAccessible = true
                         log.v("Initializing script method ${method.name}")
-                        method.invoke(null)
+                        val obj = method.invoke(null) as? AndroidScriptConfig
+                        obj?.let {
+                            if (it.title.isEmpty() || it.title == UNNAMED) {
+                                val assignedName = method.name.split("get").last().replace(Regex("(?<=[a-z])(?=[A-Z])"), " ")
+                                val titleBackingField = it.javaClass.getDeclaredField("title")
+                                titleBackingField.isAccessible = true
+                                titleBackingField.set(it, assignedName)
+                                log.v(" setting default title for $obj: $assignedName")
+                            }
+                        }
                     }
                 }
             }

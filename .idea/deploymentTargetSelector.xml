@@ -16,9 +16,6 @@
       <SelectionState runConfigName="appselection">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="AppItemCardPreview">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
       <SelectionState runConfigName="TestEntryListActivity">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>

@@ -67,7 +67,7 @@ sealed interface UiTest {
             get() = data.description
 
         override fun onActivityCreate(activity: AppCompatActivity) {
-            activity.setTheme(R.style.Theme_FltCtl)
+            data.onActivityCreate(activity)
         }
 
     }

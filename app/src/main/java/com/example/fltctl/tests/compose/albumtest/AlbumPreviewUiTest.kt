@@ -63,6 +63,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -622,6 +623,8 @@ fun TransformableImage(
 
     var enableClip by remember { mutableStateOf(false) }
 
+    val srcBounds by rememberUpdatedState<Rect>(srcRect)
+
 
     // Load full-size image
     LaunchedEffect(image.id) {
@@ -650,10 +653,10 @@ fun TransformableImage(
         log.d("Will dismiss $boundsHolder")
         boundsHolder.takeIf { it.originalImageBoundsInWindow != Rect.Zero }?.let { it.originalImageBoundsInWindow }?.let {
             val scale = it.fit(image.size).let {
-                srcRect.width / minOf(it.width, it.height)
+                srcBounds.width / minOf(it.width, it.height)
             }
             val finalClipRect = it.fit(image.size).fit(Size(1f, 1f))
-            val (_, _, translation) = it.getTransformTo(srcRect, scale)
+            val (_, _, translation) = it.getTransformTo(srcBounds, scale)
             enableClip = true
             scope.launch {
                 animatedClipRect.snapTo(Rect(0f, 0f, 1f, 1f))

@@ -12,7 +12,10 @@
 #   public *;
 #}
 -keep class com.example.fltctl.controls.arch.FloatingControl
--keep class * extends com.example.fltctl.controls.arch.FloatingControl { *; }
+-keep class * extends com.example.fltctl.controls.arch.FloatingControl
+-keep class com.example.fltctl.tests.scripting.ScriptRoot {
+    static <methods>;
+}
 
 # Uncomment this to preserve the line number information for
 # debugging stack traces.
