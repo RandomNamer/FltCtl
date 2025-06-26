@@ -209,7 +209,7 @@ private fun PipUi(count: MutableIntState, logs: MutableState<List<String>>) {
             addAction(ACTION_INC)
             addAction(ACTION_DEC)
             addAction(ACTION_RESET)
-        }, ContextCompat.RECEIVER_NOT_EXPORTED)
+        }, ContextCompat.RECEIVER_NOT_EXPORTED)// ignore_security_alert_wait_for_fix [ByDesign2.5]AddPermissionForDynamicReceiver
 
         (activity as? AppCompatActivity)?.supportActionBar?.hide()
 

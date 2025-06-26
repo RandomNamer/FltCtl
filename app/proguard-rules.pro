@@ -16,6 +16,9 @@
 -keep class com.example.fltctl.tests.scripting.ScriptRoot {
     static <methods>;
 }
+#-assumenosideeffects class com.example.fltctl.utils.Logger {
+#public *;
+#}
 
 # Uncomment this to preserve the line number information for
 # debugging stack traces.

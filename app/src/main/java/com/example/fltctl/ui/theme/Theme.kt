@@ -2,6 +2,7 @@ package com.example.fltctl.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import androidx.annotation.FloatRange
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -15,7 +16,9 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Density
 import androidx.core.view.ViewCompat
 import com.example.fltctl.configs.SettingKeys
 import com.example.fltctl.configs.SettingsCache
@@ -74,6 +77,8 @@ fun FltCtlTheme(
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     eInkTheme: Boolean = SettingsCache[SettingKeys.UI_EINK_MODE] ?: false,
+    @FloatRange(0.5, 1.3) densityScale: Float = 1f,
+    @FloatRange(0.7, 1.5) fontScale: Float = 1f,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -93,12 +98,17 @@ fun FltCtlTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-    ) {
-        CompositionLocalProvider(LocalEInkMode provides eInkTheme) {
+    val density = LocalDensity.current
+    val scaledDensity = if (densityScale != 1f || fontScale != 1f) Density(density.density * densityScale, density.fontScale * fontScale) else density
+
+
+    CompositionLocalProvider(LocalDensity provides scaledDensity, LocalEInkMode provides eInkTheme) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+        ) {
             content.invoke()
         }
     }
+
 }

@@ -1,7 +1,10 @@
 @file:JvmName("ScriptRoot")
 @file:JvmMultifileClass
+@file:Keep
 
 package com.example.fltctl.tests.scripting
+
+import androidx.annotation.Keep
 
 
 /**

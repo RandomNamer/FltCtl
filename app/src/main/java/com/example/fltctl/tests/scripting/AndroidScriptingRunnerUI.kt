@@ -3,6 +3,7 @@ package com.example.fltctl.tests.scripting
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.SystemClock
+import androidx.annotation.Keep
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +40,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.fltctl.AppMonitor
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.ui.theme.FltCtlTheme
 import com.example.fltctl.ui.toast
@@ -64,6 +64,8 @@ import kotlin.system.measureTimeMillis
  * Created by zeyu.zyzhang on 5/14/25
  * @author zeyu.zyzhang@bytedance.com
  */
+@Keep
+@ConsistentCopyVisibility
 data class AndroidScriptConfig internal constructor(
     val main: suspend AndroidScriptRunnerScope.() -> Unit,
     val title: String,
@@ -263,7 +265,7 @@ val androidScriptingRunnerEntry = UiTest.ComposeUiTest(
         initializeScriptRoots()
     }
 ).also {
-    AppMonitor.addStartupTestPage(it)
+//    AppMonitor.addStartupTestPage(it)
 }
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -277,7 +279,7 @@ fun AndroidScriptingRunnerUI() {
     var showOutputDialog by remember { mutableStateOf(false) }
     
     // Main UI
-    FltCtlTheme {
+    FltCtlTheme(densityScale = 0.9f) {
         Scaffold(
             topBar = {
                 androidx.compose.material3.TopAppBar(

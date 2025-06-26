@@ -24,22 +24,26 @@ fun initializeScriptRoots() {
         try {
             val clz = Class.forName(it)
             for (method in clz.declaredMethods) {
-                if (Modifier.isStatic(method.modifiers)) {
-                    val returnType = method.returnType
-                    if (returnType == AndroidScriptConfig::class.java) {
-                        if (!method.isAccessible) method.isAccessible = true
-                        log.v("Initializing script method ${method.name}")
-                        val obj = method.invoke(null) as? AndroidScriptConfig
-                        obj?.let {
-                            if (it.title.isEmpty() || it.title == UNNAMED) {
-                                val assignedName = method.name.split("get").last().replace(Regex("(?<=[a-z])(?=[A-Z])"), " ")
-                                val titleBackingField = it.javaClass.getDeclaredField("title")
-                                titleBackingField.isAccessible = true
-                                titleBackingField.set(it, assignedName)
-                                log.v(" setting default title for $obj: $assignedName")
+                try {
+                    if (Modifier.isStatic(method.modifiers)) {
+                        val returnType = method.returnType
+                        if (returnType == AndroidScriptConfig::class.java) {
+                            if (!method.isAccessible) method.isAccessible = true
+                            log.v("Initializing script method ${method.name}")
+                            val obj = method.invoke(null) as? AndroidScriptConfig
+                            obj?.runCatching {
+                                if (title.isEmpty() || title == UNNAMED) {
+                                    val assignedName = method.name.split("get").last().replace(Regex("(?<=[a-z])(?=[A-Z])"), " ")
+                                    val titleBackingField = javaClass.getDeclaredField("title")
+                                    titleBackingField.isAccessible = true
+                                    titleBackingField.set(this@runCatching, assignedName)
+                                    log.v(" setting default title: $assignedName")
+                                }
                             }
                         }
                     }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         } catch (e: Exception) {

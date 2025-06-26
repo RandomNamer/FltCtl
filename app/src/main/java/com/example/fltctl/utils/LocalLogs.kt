@@ -470,7 +470,7 @@ class Logger(
     }
 
     fun v(message: String) = realProxy.log(LogProxy.VERBOSE, tag, message)
-    fun d(message: String) = realProxy.log(LogProxy.DEBUG, tag, message)
+    internal fun d(message: String) = realProxy.log(LogProxy.DEBUG, tag, message)
     fun i(message: String) = realProxy.log(LogProxy.INFO, tag, message)
     fun w(message: String) = realProxy.log(LogProxy.WARN, tag, message)
     fun e(message: String) = realProxy.log(LogProxy.ERROR, tag, message)

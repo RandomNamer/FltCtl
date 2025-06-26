@@ -41,7 +41,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Surface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -107,11 +106,7 @@ import kotlin.math.absoluteValue
 val albumPreviewUiTest = UiTest.ComposeUiTest(
     title = "Album Preview Gestures",
     content = {
-        FltCtlTheme {
-            Surface {
-                Album()
-            }
-        }
+        Album()
     }
 ).also {
 //    AppMonitor.addStartupTestPage(it)
@@ -147,7 +142,7 @@ fun BoxScope.Album() {
         if (!showImagePreview) viewModel.onPreviewPageChange(-1 )
     }
     
-    FltCtlTheme(darkTheme = false) {
+    FltCtlTheme(darkTheme = false, fontScale = 0.8f) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Tab layout
             TabRow(

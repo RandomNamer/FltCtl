@@ -13,8 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +32,7 @@ import com.example.fltctl.tests.compose.androidPipTest
 import com.example.fltctl.tests.compose.defaultImplIssueTest
 import com.example.fltctl.tests.compose.flingTest
 import com.example.fltctl.tests.compose.paddingSeqTest
+import com.example.fltctl.tests.compose.pathedAvatarOverlay
 import com.example.fltctl.tests.controls.CrashTest
 import com.example.fltctl.tests.controls.FloatingControlIntegrationTest
 import com.example.fltctl.tests.controls.LogViewer
@@ -53,6 +55,7 @@ object TestEntry {
         androidScriptingRunnerEntry,
         FloatingControlIntegrationTest(),
         albumPreviewUiTest,
+        pathedAvatarOverlay,
         LogViewer(),
         OobTouchEventTest(),
 //        oobTouchEventTestCompose,
@@ -87,21 +90,21 @@ object TestEntry {
             val tests = registry.toMutableList().apply { addAll(debugOnly) }
 //            enableEdgeToEdge()
             setContent {
-                FltCtlTheme {
+                FltCtlTheme(densityScale = 0.8f) {
                     Scaffold( modifier = Modifier.fillMaxSize(),
                         topBar = { TopAppBar(title = { Text("Test Entry") }) }
                     ) { innerPadding ->
-                        val listScrollState = rememberScrollState()
-                        Column(
-                            Modifier
+                        LazyVerticalStaggeredGrid (
+                            columns = StaggeredGridCells.FixedSize(250.dp),
+                            verticalItemSpacing = 8.dp,
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            modifier = Modifier
                                 .padding(innerPadding)
                                 .padding(horizontal = 10.dp)
                                 .padding(bottom = 10.dp)
                                 .fillMaxWidth()
-                                .verticalScroll(listScrollState)
                         ) {
-                            tests.forEach { uiTest ->
-                                Spacer(Modifier.height(10.dp))
+                            items(tests, key = { it.title }) { uiTest ->
                                 EInkCompatCard(LocalEInkMode.current, Modifier.clickable {
                                     enterTest(this@TestEntryListActivity, uiTest)
                                 }) { pv ->
