@@ -93,4 +93,6 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-reflect:2.1.0"
 
     implementation "com.google.code.gson:gson:2.13.1"
+
+    implementation 'com.bytedance.btrace:rhea-inhouse:3.0.0'
 }

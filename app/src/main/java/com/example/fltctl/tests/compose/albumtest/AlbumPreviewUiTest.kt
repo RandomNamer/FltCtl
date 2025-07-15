@@ -278,15 +278,17 @@ fun ImageGrid(
 }
 
 @Composable
-fun ImageItem(image: ImageSource, onClick: () -> Unit, isSelected: Boolean) {
+fun ImageItem(modifier: Modifier = Modifier, image: ImageSource, onClick: () -> Unit, isSelected: Boolean) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     
-    LaunchedEffect(image.id) {
+    LaunchedEffect(Unit) {
         bitmap = image.provideThumbnail()
+        if ((bitmap?.height ?: 0) > 1000)
+            log.w("possible too large bitmap: ${bitmap!!.width} ${bitmap!!.height} ${bitmap!!.byteCount}")
     }
     
     Box(
-        modifier = Modifier
+        modifier = modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(4.dp))
             .clickable(onClick = onClick)

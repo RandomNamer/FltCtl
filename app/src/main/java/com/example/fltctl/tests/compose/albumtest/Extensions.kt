@@ -1,5 +1,6 @@
 package com.example.fltctl.tests.compose.albumtest
 
+import android.os.CancellationSignal
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroid
@@ -19,6 +20,9 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastSumBy
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.math.abs
 import kotlin.math.absoluteValue
 import kotlin.math.sqrt
@@ -277,5 +281,18 @@ fun imagePivotIn(imageSize: Size, containerSize: Size): TransformOrigin {
             pivotFractionX = (1 - imageAspectRatio / containerAspectRatio) / 2f,
             pivotFractionY = 0f
         )
+    }
+}
+
+suspend fun <T : Any> loadCancellable(block: (CancellationSignal) -> T) = suspendCancellableCoroutine<T> { continuation ->
+    val signal = CancellationSignal()
+    continuation.invokeOnCancellation {
+        signal.cancel()
+    }
+    try {
+        val result = block(signal)
+        continuation.resume(result)
+    } catch (e: Exception) {
+        continuation.resumeWithException(e)
     }
 }

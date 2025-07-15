@@ -28,11 +28,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.fltctl.tests.compose.albumtest.albumPreviewUiTest
+import com.example.fltctl.tests.compose.albumtest.draggableScrollBar
 import com.example.fltctl.tests.compose.androidPipTest
 import com.example.fltctl.tests.compose.defaultImplIssueTest
 import com.example.fltctl.tests.compose.flingTest
 import com.example.fltctl.tests.compose.paddingSeqTest
 import com.example.fltctl.tests.compose.pathedAvatarOverlay
+import com.example.fltctl.tests.compose.tutorials.tutorialRegistry
 import com.example.fltctl.tests.controls.CrashTest
 import com.example.fltctl.tests.controls.FloatingControlIntegrationTest
 import com.example.fltctl.tests.controls.LogViewer
@@ -58,6 +60,7 @@ object TestEntry {
         pathedAvatarOverlay,
         LogViewer(),
         OobTouchEventTest(),
+        draggableScrollBar,
 //        oobTouchEventTestCompose,
         androidPipTest,
         CrashTest(),
@@ -69,8 +72,9 @@ object TestEntry {
         paddingSeqTest,
         defaultImplIssueTest,
         textViewEllipsizeTest,
-
-    )
+    ).apply {
+        addAll(tutorialRegistry)
+    }
 
     @Composable
     fun TestSelectionEntry(dismissHandle: () -> Unit) {

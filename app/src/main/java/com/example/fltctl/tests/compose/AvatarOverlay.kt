@@ -54,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.util.fastFirst
 import androidx.core.graphics.toRect
-import com.example.fltctl.AppMonitor
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.ui.theme.FltCtlTheme
 import com.example.fltctl.utils.logs
@@ -73,7 +72,7 @@ val pathedAvatarOverlay = UiTest.ComposeUiTest(
         CombinedAvatar()
     }
 ).also {
-    AppMonitor.addStartupTestPage(it)
+//    AppMonitor.addStartupTestPage(it)
 }
 
 private data class DotConfig(

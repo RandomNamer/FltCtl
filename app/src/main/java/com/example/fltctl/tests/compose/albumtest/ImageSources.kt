@@ -63,7 +63,7 @@ abstract class BaseImageSource(
     }
 
     protected fun getDefaultThumbnailSize(): Pair<Int, Int> {
-        val maxThumbnailDimension = 150
+        val maxThumbnailDimension = 200
         val thumbnailWidth: Int
         val thumbnailHeight: Int
 

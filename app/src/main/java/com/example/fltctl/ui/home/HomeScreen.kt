@@ -16,10 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.ContentAlpha
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.ArrowForwardIos
@@ -51,11 +52,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -369,13 +370,13 @@ fun SwitchCard(
             Switch(checked = switched, onCheckedChange = onSwitched, colors = SwitchDefaults.colors(uncheckedTrackColor = Color.White))
         }
         Row(modifier = Modifier
-            .alpha(if (switched) 1f else ContentAlpha.disabled)
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 0.dp),
+            .wrapContentSize()
+            .padding(horizontal = 16.dp, vertical = 0.dp)
+            .toggleable(value = checked, onValueChange = onChecked, role = Role.Checkbox),
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(checked = checked, onCheckedChange = onChecked, enabled = switched)
+            Checkbox(checked = checked, onCheckedChange = {}, enabled = true)
             Text(
                 text = stringResource(id = R.string.show_wnd_in_app),
                 textAlign = TextAlign.Start,

@@ -6,16 +6,22 @@ import android.content.Context
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.icu.text.DateFormat
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Size
 import androidx.annotation.RequiresApi
 import androidx.core.database.getIntOrNull
+import androidx.core.database.getLongOrNull
 import androidx.core.database.getStringOrNull
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import java.lang.ref.WeakReference
+import kotlin.math.max
 
 /**
  * Implementation of ImageSource that loads images from the device's system album
@@ -26,6 +32,8 @@ class SystemAlbumImageSource private constructor(
     override val description: String,
     override val width: Int,
     override val height: Int,
+    val timeTaken: Long,
+    val rotation: Int,
     private val contentUri: Uri,
     private val thumbnailUri: Uri?,
     private val contentResolver: ContentResolver
@@ -34,6 +42,9 @@ class SystemAlbumImageSource private constructor(
     private var thumbnailCache: WeakReference<Bitmap> = WeakReference(null)
     private var imageCache: WeakReference<Bitmap> = WeakReference(null)
 
+    val dateString: String
+        get() = DateFormat.getDateInstance().format(timeTaken)
+
     override suspend fun provideThumbnail(): Bitmap {
         // Return cached thumbnail if available
         thumbnailCache.get()?.let { return it }
@@ -41,18 +52,22 @@ class SystemAlbumImageSource private constructor(
         return withContext(Dispatchers.IO) {
             try {
                 // First try to use the system thumbnail if available
-                if (thumbnailUri != null) {
-                    try {
-                        contentResolver.openInputStream(thumbnailUri)?.use { inputStream ->
-                            BitmapFactory.decodeStream(inputStream)?.let { bitmap ->
-                                thumbnailCache = WeakReference(bitmap)
-                                return@withContext bitmap
-                            }
-                        }
-                    } catch (e: FileNotFoundException) {
-                        // Thumbnail not found, will fall back to scaling the full image
+                try {
+                    val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        loadThumbnailApi29Impl()
+                    } else {
+                        loadThumbnailApi21Impl()
                     }
+                    if (max(bitmap.width, bitmap.height) > 1000) throw RuntimeException("Bitmap returned too large: ${bitmap.width}x${bitmap.height}")
+                    else {
+                        thumbnailCache = WeakReference(bitmap)
+                        return@withContext bitmap
+                    }
+                } catch (e: Exception) {
+                    log.w("Failed to load thumbnail from $thumbnailUri: $e, will start create scaled image")
                 }
+
+                ensureActive()
 
                 // If thumbnail not available, scale down the full image
                 val (thumbnailWidth, thumbnailHeight) = getDefaultThumbnailSize()
@@ -60,12 +75,16 @@ class SystemAlbumImageSource private constructor(
                     inSampleSize = calculateInSampleSize(width, height, thumbnailWidth, thumbnailHeight)
                 }
 
+                log.i("Will start resize bitmap request for thumbnail: $thumbnailUri")
+
                 contentResolver.openInputStream(contentUri)?.use { inputStream ->
                     BitmapFactory.decodeStream(inputStream, null, options)?.let { bitmap ->
                         thumbnailCache = WeakReference(bitmap)
                         return@withContext bitmap
                     }
                 }
+
+                ensureActive()
 
                 // If all else fails, create a placeholder bitmap
                 createPlaceholderBitmap(thumbnailWidth, thumbnailHeight).also {
@@ -79,6 +98,39 @@ class SystemAlbumImageSource private constructor(
                 }
             }
         }
+    }
+
+
+    @RequiresApi(29)
+    private suspend fun loadThumbnailApi29Impl(): Bitmap {
+        try {
+            val bitmap = loadCancellable { cs ->
+                val (w, h) = getDefaultThumbnailSize()
+                contentResolver.loadThumbnail(contentUri, Size(w, h), cs)
+            }
+            return bitmap
+        } catch (e: CancellationException) {
+        } catch (e: Exception) {
+            throw e
+        }
+        return createPlaceholderBitmap(width, height)
+    }
+
+    private fun loadThumbnailApi21Impl(): Bitmap {
+        try {
+            val (w, h) = getDefaultThumbnailSize()
+            val bitmap = MediaStore.Images.Thumbnails.getThumbnail(
+                contentResolver,
+                id.toLong(),
+                MediaStore.Images.Thumbnails.MINI_KIND,
+                BitmapFactory.Options()
+            )
+            if (bitmap != null) return bitmap else throw FileNotFoundException()
+        } catch (e: CancellationException) {
+        } catch (e: Exception) {
+            throw e
+        }
+        return createPlaceholderBitmap(width, height)
     }
 
     override suspend fun provideImage(): Bitmap {
@@ -138,6 +190,8 @@ class SystemAlbumImageSource private constructor(
             val displayNameColumn = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
             val widthColumn = cursor.getColumnIndex(MediaStore.Images.Media.WIDTH)
             val heightColumn = cursor.getColumnIndex(MediaStore.Images.Media.HEIGHT)
+            val dateColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATE_TAKEN)
+            val rotationColumn = cursor.getColumnIndex(MediaStore.Images.Media.ORIENTATION)
 
             // Extract values
             val id = cursor.getLong(idColumn)
@@ -146,6 +200,8 @@ class SystemAlbumImageSource private constructor(
             // Get dimensions, with fallbacks for older API levels
             val width = cursor.getIntOrNull(widthColumn) ?: 1000
             val height = cursor.getIntOrNull(heightColumn) ?: 1000
+            val dateTaken = cursor.getLongOrNull(dateColumn)?: 0
+            val rotation = cursor.getIntOrNull(rotationColumn)?: 0
 
             // Create content URI for the image
             val contentUri = ContentUris.withAppendedId(
@@ -156,7 +212,7 @@ class SystemAlbumImageSource private constructor(
             // Get thumbnail URI if available (API 29+)
             val thumbnailUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentUris.withAppendedId(
-                    MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI,
+                    MediaStore.Images.Thumbnails.INTERNAL_CONTENT_URI,
                     id
                 )
             } else {
@@ -164,10 +220,12 @@ class SystemAlbumImageSource private constructor(
             }
 
             return SystemAlbumImageSource(
-                id = "system_$id",
+                id = id.toString(),
                 description = displayName,
                 width = width,
                 height = height,
+                timeTaken = dateTaken,
+                rotation = rotation,
                 contentUri = contentUri,
                 thumbnailUri = thumbnailUri,
                 contentResolver = contentResolver
@@ -262,6 +320,8 @@ class SystemAlbumImageRepo(private val context: Context) : ImageRepository() {
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.DISPLAY_NAME,
             MediaStore.Images.Media.DATE_ADDED,
+            MediaStore.Images.Media.DATE_TAKEN,
+            MediaStore.Images.Media.ORIENTATION,
             MediaStore.Images.Media.SIZE,
             MediaStore.Images.Media.WIDTH,
             MediaStore.Images.Media.HEIGHT

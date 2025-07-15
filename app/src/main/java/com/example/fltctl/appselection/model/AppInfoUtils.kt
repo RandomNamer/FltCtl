@@ -10,11 +10,10 @@ import android.net.Uri
 import android.widget.Toast
 import com.example.fltctl.AppMonitor
 import com.example.fltctl.appselection.ui.PackageFilterCriterion
-import com.example.fltctl.utils.LogProxy
 import com.example.fltctl.utils.logs
 
 const val TAG_APPINF = "AppInfInfra"
-val log by logs(TAG_APPINF)
+private val log by logs(TAG_APPINF)
 
 fun PackageFilterCriterion.filter(appInfo: AppInfo): Boolean {
     return appInfo.search(searchKeyword ?: "") &&
@@ -65,7 +64,7 @@ fun Context.openAppSettingsPage(packageName: String) {
 }
 
 fun Context.startActivityByName(pkgName: String, clsName: String) {
-    log.w("starting Activity by: $pkgName, $clsName")
+    log.i("starting Activity by: $pkgName, $clsName")
     try {
         startActivity(Intent().apply {
             component = ComponentName(pkgName, clsName)
@@ -73,7 +72,10 @@ fun Context.startActivityByName(pkgName: String, clsName: String) {
         })
     } catch (e: java.lang.SecurityException) {
         Toast.makeText(AppMonitor.appContext, "Start activity failed, possibly intent filter mismatch", Toast.LENGTH_SHORT).show()
+        log.w(e.toString())
+        log.w(e.stackTraceToString())
     } catch (e: Exception) {
         Toast.makeText(AppMonitor.appContext, "Other Exception: $e", Toast.LENGTH_LONG).show()
+        log.w("Other exception: $e")
     }
 }

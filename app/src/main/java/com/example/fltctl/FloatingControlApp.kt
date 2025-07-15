@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import androidx.annotation.MainThread
+import com.bytedance.rheatrace.RheaTrace3
 import com.example.fltctl.appselection.ui.AppSelectActivity
 import com.example.fltctl.configs.SettingsCache
 import com.example.fltctl.tests.TestEntry
@@ -39,6 +40,11 @@ class FloatingControlApp : Application() {
         const val TAG = "Application"
         const val CRASH_RECOVER = "crash_recover"
         const val CRASH_STACKTRACE_STR = "crash_stacktrace"
+    }
+
+    override fun attachBaseContext(base: Context?) {
+        super.attachBaseContext(base)
+        RheaTrace3.init(base)
     }
 
     override fun onCreate() {
