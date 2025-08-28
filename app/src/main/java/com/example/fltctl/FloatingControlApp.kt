@@ -44,7 +44,9 @@ class FloatingControlApp : Application() {
 
     override fun attachBaseContext(base: Context?) {
         super.attachBaseContext(base)
-        RheaTrace3.init(base)
+        if (BuildConfig.DEBUG) {
+            RheaTrace3.init(base)
+        }
     }
 
     override fun onCreate() {

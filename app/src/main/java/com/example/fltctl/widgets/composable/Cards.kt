@@ -63,10 +63,12 @@ fun EInkCompatCard(
     shadowElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     tonalElevation: Dp = 4.dp,
     border: BorderStroke? = null,
+    conformToRecommendedPadding: Boolean = false,
     content: @Composable ColumnScope.(PaddingValues) -> Unit
 ) {
     val outlineColor = MaterialTheme.colorScheme.onBackground
     if (isInEInkMode) modifier.background(Color.White)
+    val recommendedPadding = (shape as? RoundedCornerShape)?.recommendedPadding() ?: PaddingValues(0.dp)
     Card(
         modifier = modifier.wrapContentSize(),
         shape,
@@ -75,8 +77,8 @@ fun EInkCompatCard(
         border = if (isInEInkMode) BorderStroke(2.dp, outlineColor) else border,
     ) {
         Surface(Modifier.wrapContentSize(), tonalElevation = if (isInEInkMode) 0.dp else tonalElevation) {
-            Column() {
-                content((shape as? RoundedCornerShape)?.recommendedPadding() ?: PaddingValues(0.dp))
+            Column(if (conformToRecommendedPadding) Modifier.padding(recommendedPadding) else Modifier) {
+                content(recommendedPadding)
             }
         }
     }

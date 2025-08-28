@@ -61,7 +61,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.fltctl.AppMonitor
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.ui.theme.FltCtlTheme
 import com.example.fltctl.widgets.composable.EInkCompatCard
@@ -82,7 +81,7 @@ val draggableScrollBar = UiTest.ComposeUiTest(
         Screen()
     }
 ).also {
-    AppMonitor.addStartupTestPage(it)
+//    AppMonitor.addStartupTestPage(it)
 }
 
 
@@ -355,16 +354,17 @@ private fun ScrollBarOverlay(
                                 val listTotalHeight = itemHeight * totalColumns
                                 scope.launch {
                                     dragPosition.snapTo((dragPosition.value + amount).coerceIn(0f, viewHeight.toFloat()))
-                                    val columnIndex = ((dragPosition.value / viewHeight.toFloat()) * totalColumns).roundToInt()
+                                    val columnIndex = ((dragPosition.value / viewHeight.toFloat()) * totalColumns).toInt()
                                     val index = columnIndex * columnCount
+                                    val toItemRemaining = ((dragPosition.value / viewHeight.toFloat()) * listTotalHeight) % itemHeight
                                     val title = titleCallback(index)
                                     gripTitle = title
                                     val dragAmountScaled = (amount / viewHeight.toFloat()) * listTotalHeight
                                     when (scrollMethodLatest) {
-                                        ScrollMethod.ITEM -> gridState.scrollToItem(index, 0)
+                                        ScrollMethod.ITEM -> gridState.scrollToItem(index, toItemRemaining.roundToInt())
                                         ScrollMethod.BY -> gridState.scrollBy(dragAmountScaled)
                                     }
-                                    log.d("Dragging to $index by $scrollMethodLatest, title: $title yoffset: ${dragPosition.value}")
+                                    log.d("Dragging to $index by $scrollMethodLatest, title: $title yoffset: ${dragPosition.value} $toItemRemaining")
                                 }
 
                             }

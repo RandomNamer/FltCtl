@@ -40,7 +40,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.fltctl.AppMonitor
 import com.example.fltctl.tests.UiTest
 import com.example.fltctl.ui.theme.FltCtlTheme
 import com.example.fltctl.ui.toast
@@ -266,7 +265,7 @@ val androidScriptingRunnerEntry = UiTest.ComposeUiTest(
         initializeScriptRoots()
     }
 ).also {
-    AppMonitor.addStartupTestPage(it)
+//    AppMonitor.addStartupTestPage(it)
 }
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")

@@ -12,6 +12,8 @@ import android.view.ViewGroup
 import androidx.annotation.ColorInt
 import androidx.annotation.FloatRange
 import androidx.annotation.Px
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.example.fltctl.configs.EInkDeviceConfigs
 import kotlin.math.roundToInt
 
@@ -94,6 +96,10 @@ fun Int.withAlpha(@FloatRange(0.0, 1.0) alpha: Float): Int {
     val a = (alpha * 255).roundToInt() shl 24
     val rgb = 0x00ffffff and this
     return a + rgb
+}
+
+fun Color.withAlpha(@FloatRange(0.0, 1.0) alpha: Float): Color {
+    return Color(this.toArgb().withAlpha(alpha))
 }
 
 fun createRoundedCornerColorDrawable(@ColorInt color: Int,cornerRadius: Float): Drawable = GradientDrawable().apply {

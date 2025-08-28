@@ -16,6 +16,7 @@
 -keep class com.example.fltctl.tests.scripting.ScriptRoot {
     static <methods>;
 }
+-keep class com.bytedance.rheatrace.RheaTrace3
 #-assumenosideeffects class com.example.fltctl.utils.Logger {
 #public *;
 #}

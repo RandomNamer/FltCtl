@@ -1,8 +1,12 @@
 package com.example.fltctl.tests.compose.tutorials.layout
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
@@ -18,12 +22,14 @@ import com.example.fltctl.utils.logs
  * Created by zeyu.zyzhang on 6/27/25
  * @author zeyu.zyzhang@bytedance.com
  */
+@OptIn(ExperimentalFoundationApi::class)
 val layoutModifierChaining = UiTest.ComposeUiTest(
     title = "Layout Modifier Chaining",
     description = "Test the usage of layout modifier chaining.",
     content = {
         val log by logs("layoutModifierChaining")
-        Box(modifier = Modifier.fillMaxSize().wrapContentSize(align = Alignment.Center).size(100.dp).background(Color.Blue))
+
+        Box(modifier = Modifier.fillMaxSize().wrapContentSize(align = Alignment.Center).size(200.dp).background(Color.Blue).size(100.dp))
         Box(
             modifier = Modifier
 //                .fillMaxSize()
@@ -41,7 +47,13 @@ val layoutModifierChaining = UiTest.ComposeUiTest(
                 .size(100.dp)
                 .padding(25.dp)
                 .background(Color.Yellow)
+                .combinedClickable(
+                    onLongClick = {},
+                    onClick = {}
+                )
+
         )
+        Box(Modifier.align(Alignment.BottomCenter).padding(20.dp).fillMaxWidth().height(40.dp).background(Color.Red))
     },
 ).also {
 //    AppMonitor.addStartupTestPage(it)

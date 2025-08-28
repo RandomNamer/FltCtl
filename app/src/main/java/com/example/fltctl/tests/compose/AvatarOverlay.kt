@@ -25,6 +25,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,7 +75,7 @@ val pathedAvatarOverlay = UiTest.ComposeUiTest(
 ).also {
 //    AppMonitor.addStartupTestPage(it)
 }
-
+@Stable
 private data class DotConfig(
     val centerOffsetDp: Offset,
     val innerRadius: Dp,

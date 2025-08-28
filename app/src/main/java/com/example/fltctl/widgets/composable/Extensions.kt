@@ -3,6 +3,7 @@ package com.example.fltctl.widgets.composable
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.rememberScrollState
@@ -10,6 +11,7 @@ import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithContent
@@ -17,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.node.Ref
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -68,6 +71,9 @@ fun CornerSize.toDp(): Dp = this@toDp.toPx().toDp()
 fun Float.toDp() : Dp = (this / 1.dp.toPx()).dp
 
 @Composable
+fun Int.toDp(): Dp = (this / 1.dp.toPx()).dp
+
+@Composable
 fun Modifier.simplyScrollable(): Modifier = composed {
     val vss = rememberScrollState()
     val hss = rememberScrollState()
@@ -83,3 +89,14 @@ fun CornerBasedShape.recommendedPadding(): PaddingValues = PaddingValues(
     end = max(topEnd.toDp(), bottomEnd.toDp()) * ROUNDEDCORNER_PADDING_FRAC,
     bottom = max(bottomStart.toDp(), bottomEnd.toDp()) * ROUNDEDCORNER_PADDING_FRAC
 )
+
+fun Modifier.debouncedClickable(onClick: () -> Unit, duration: Long): Modifier = composed {
+    val lastClicked = remember { Ref<Long>().apply { 0L } }
+    return@composed this.clickable {
+        val now = System.currentTimeMillis()
+        if (now - (lastClicked.value ?: 0L) > duration) {
+            lastClicked.value = now
+            onClick()
+        }
+    }
+}

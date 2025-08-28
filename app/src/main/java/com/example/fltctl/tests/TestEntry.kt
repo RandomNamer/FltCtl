@@ -30,7 +30,10 @@ import androidx.compose.ui.unit.dp
 import com.example.fltctl.tests.compose.albumtest.albumPreviewUiTest
 import com.example.fltctl.tests.compose.albumtest.draggableScrollBar
 import com.example.fltctl.tests.compose.androidPipTest
+import com.example.fltctl.tests.compose.clickablesTest
+import com.example.fltctl.tests.compose.compositionLessAnimations
 import com.example.fltctl.tests.compose.defaultImplIssueTest
+import com.example.fltctl.tests.compose.expandableToolbar
 import com.example.fltctl.tests.compose.flingTest
 import com.example.fltctl.tests.compose.paddingSeqTest
 import com.example.fltctl.tests.compose.pathedAvatarOverlay
@@ -57,6 +60,9 @@ object TestEntry {
         androidScriptingRunnerEntry,
         FloatingControlIntegrationTest(),
         albumPreviewUiTest,
+        clickablesTest,
+        expandableToolbar,
+        compositionLessAnimations,
         pathedAvatarOverlay,
         LogViewer(),
         OobTouchEventTest(),
